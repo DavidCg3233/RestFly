@@ -13,7 +13,7 @@ carpetas_compartidas = [
 
 # Módulos según tus RFs
 modulos = [
-    "autenticacion",
+    "login",
     "usuarios",
     "mesas",
     "pedidos",
