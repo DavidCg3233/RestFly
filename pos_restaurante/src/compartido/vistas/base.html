@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RestFly - Panel Principal</title>
+    
+    <link rel="stylesheet" href="../utilidades/estilos.css">
+    <script src="../seguridad/verificar_sesion.js"></script>
+    
+    <script>
+        if (localStorage.getItem('tema') === 'claro') {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: {
+            background: 'var(--fondo)', foreground: 'var(--texto)', card: 'var(--tarjeta)',
+            primary: 'var(--primario)', 'primary-foreground': 'var(--primario-texto)',
+            secondary: 'var(--secundario)', muted: 'var(--texto-apagado)',
+            destructive: 'var(--peligro)', border: 'var(--borde)', sidebar: 'var(--tarjeta)',
+            'sidebar-border': 'var(--borde)'
+        }}}}
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-background text-foreground font-sans flex h-screen overflow-hidden transition-colors duration-300">
+
+    <div id="fondo-movil" class="fixed inset-0 bg-black/60 z-40 hidden lg:hidden" onclick="alternarMenu()"></div>
+
+    <aside id="barra-lateral" class="fixed lg:static top-0 left-0 h-full w-64 shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col z-50 transition-all duration-300 -translate-x-full lg:translate-x-0 lg:ml-0">
+        
+        <div class="flex items-center justify-between p-5 border-b border-sidebar-border">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shadow-[0_0_15px_rgba(191,47,102,0.3)]">
+                    <i data-lucide="flame" class="w-5 h-5 text-primary"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-foreground text-base leading-tight block">RestFly</span>
+                    <span class="text-xs text-muted tracking-widest uppercase">Gestión</span>
+                </div>
+            </div>
+            <button onclick="alternarMenu()" class="lg:hidden text-muted hover:text-primary transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 p-4 flex flex-col gap-2 overflow-y-auto">
+            <p class="text-[10px] font-bold text-muted uppercase tracking-wider px-3 mb-1">Módulos Principales</p>
+            
+            <button onclick="cargarModulo('../../modulos/tablero/vistas/contenido_tablero.html', 'Tablero General')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all hover:bg-primary/10 hover:text-primary border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                <span class="flex-1 text-left">Tablero</span>
+            </button>
+
+            <button onclick="cargarModulo('../../modulos/mesas/vistas/contenido_mesas.html', 'Mesas & Pedidos')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent">
+                <i data-lucide="map" class="w-4 h-4"></i>
+                <span class="flex-1 text-left">Mesas & Pedidos</span>
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-sidebar-border bg-secondary/30">
+            <button onclick="alternarMenuUsuario()" class="w-full flex items-center gap-3 p-2 -mx-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left">
+                <div class="w-10 h-10 rounded-xl bg-secondary border border-border flex items-center justify-center shrink-0">
+                    <span class="ui-iniciales-usuario text-sm font-bold text-foreground">--</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="ui-nombre-usuario text-sm font-bold text-foreground truncate">Cargando...</p>
+                    <span class="ui-rol-usuario text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase tracking-wider">---</span>
+                </div>
+                <i data-lucide="chevron-down" id="icono-menu-usuario" class="w-4 h-4 text-muted transition-transform duration-300"></i>
+            </button>
+
+            <div id="menu-usuario" class="hidden flex-col gap-1 mt-3 overflow-hidden">
+                <button onclick="alternarTema()" class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-lg text-muted hover:text-foreground hover:bg-secondary transition-colors">
+                    <div class="hidden dark:flex items-center gap-2 w-full">
+                        <i data-lucide="sun" class="w-4 h-4"></i>
+                        Modo Claro
+                    </div>
+                    <div class="flex dark:hidden items-center gap-2 w-full">
+                        <i data-lucide="moon" class="w-4 h-4"></i>
+                        Modo Oscuro
+                    </div>
+                </button>
+
+                <button onclick="cerrarSesion()" class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-lg text-muted hover:text-destructive hover:bg-destructive/10 transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    Cerrar sesión
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div class="absolute top-0 right-0 w-[400px] h-[400px] rounded-full opacity-[0.03] bg-primary blur-[100px]"></div>
+        </div>
+
+        <header class="h-16 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 shrink-0 z-10">
+            <div class="flex items-center gap-4">
+                <button onclick="alternarMenu()" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-secondary text-muted hover:text-primary transition-colors border border-transparent hover:border-border">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+                <div class="flex items-center gap-2 text-sm">
+                    <i data-lucide="flame" class="w-4 h-4 text-primary"></i>
+                    <span class="text-muted">/</span>
+                    <span id="titulo-modulo" class="text-foreground font-bold tracking-wide">Tablero General</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex items-center gap-3 pl-4 border-l border-border">
+                    <div class="text-right">
+                        <p class="ui-nombre-usuario text-sm text-foreground font-bold leading-tight">Cargando...</p>
+                        <p class="text-[10px] text-muted uppercase tracking-widest">En turno</p>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/30">
+                        <span class="ui-iniciales-usuario text-xs font-bold text-primary">--</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main id="contenedor-principal" class="flex-1 overflow-y-auto p-6 z-10 relative">
+            </main>
+    </div>
+
+    <script>
+        // Inicializar iconos
+        lucide.createIcons();
+        
+        // 1. Lógica del Menú Lateral (Cerrar/Abrir)
+        function alternarMenu() {
+            const barra = document.getElementById('barra-lateral');
+            const fondo = document.getElementById('fondo-movil');
+            barra.classList.toggle('-translate-x-full');
+            fondo.classList.toggle('hidden');
+            barra.classList.toggle('lg:-ml-64');
+        }
+
+        // 2. Lógica del Menú Desplegable de Usuario
+        function alternarMenuUsuario() {
+            const menu = document.getElementById('menu-usuario');
+            const icono = document.getElementById('icono-menu-usuario');
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('flex');
+            icono.classList.toggle('rotate-180');
+        }
+
+        // 3. Lógica de Cambio de Tema
+        function alternarTema() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('tema', 'claro');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('tema', 'oscuro');
+            }
+        }
+
+        // 4. Cerrar Sesión
+        function cerrarSesion() {
+            localStorage.removeItem('usuario_sesion');
+            window.location.replace("../../modulos/login/vistas/index.html"); 
+        }
+
+        // 5. Carga Dinámica de Módulos
+        async function cargarModulo(ruta, titulo) {
+            const contenedor = document.getElementById('contenedor-principal');
+            const tituloUI = document.getElementById('titulo-modulo');
+            
+            contenedor.innerHTML = '<div class="flex h-full items-center justify-center text-primary"><i data-lucide="loader-2" class="w-8 h-8 animate-spin"></i></div>';
+            lucide.createIcons();
+
+            try {
+                const respuesta = await fetch(ruta);
+                if (!respuesta.ok) throw new Error('No se pudo cargar el archivo');
+                
+                const html = await respuesta.text();
+                contenedor.innerHTML = html;
+                
+                if (titulo) tituloUI.textContent = titulo;
+                lucide.createIcons();
+                
+                if (window.innerWidth < 1024) {
+                    document.getElementById('barra-lateral').classList.add('-translate-x-full');
+                    document.getElementById('fondo-movil').classList.add('hidden');
+                }
+
+            } catch (error) {
+                console.error("Error:", error);
+                contenedor.innerHTML = `<div class="text-center text-destructive p-10 font-bold">Error al cargar módulo.</div>`;
+            }
+        }
+
+        // Cargar por defecto
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarModulo('../../modulos/tablero/vistas/contenido_tablero.html', 'Tablero General');
+        });
+    </script>
+</body>
+</html>

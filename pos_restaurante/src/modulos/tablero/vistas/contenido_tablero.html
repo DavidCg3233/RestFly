@@ -1,0 +1,59 @@
+<h2 class="text-2xl font-bold text-foreground mb-6">Resumen de Hoy</h2>
+            
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    
+    <div class="bg-card border border-border rounded-2xl p-5 shadow-lg relative overflow-hidden">
+        <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+        <div class="flex items-start justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30">
+                <i data-lucide="dollar-sign" class="w-5 h-5 text-primary"></i>
+            </div>
+            <span class="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded-md">+15%</span>
+        </div>
+        <p class="text-muted text-sm font-medium mb-1">Ventas del Día</p>
+        <h3 class="text-2xl font-bold text-foreground">$1,245.00</h3>
+    </div>
+
+    <div class="bg-card border border-border rounded-2xl p-5 shadow-lg">
+        <div class="flex items-start justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center border border-border">
+                <i data-lucide="users" class="w-5 h-5 text-foreground"></i>
+            </div>
+        </div>
+        <p class="text-muted text-sm font-medium mb-1">Mesas Ocupadas</p>
+        <h3 class="text-2xl font-bold text-foreground">8 <span class="text-sm font-normal text-muted">/ 20</span></h3>
+    </div>
+
+    <div class="bg-card border border-border rounded-2xl p-5 shadow-lg">
+        <div class="flex items-start justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center border border-orange-500/30">
+                <i data-lucide="chef-hat" class="w-5 h-5 text-orange-500"></i>
+            </div>
+            <span class="flex h-3 w-3 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+            </span>
+        </div>
+        <p class="text-muted text-sm font-medium mb-1">Pedidos Pendientes</p>
+        <h3 class="text-2xl font-bold text-foreground">12</h3>
+    </div>
+
+    <div class="bg-card border border-border rounded-2xl p-5 shadow-lg">
+        <div class="flex items-start justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center border border-destructive/30">
+                <i data-lucide="package-minus" class="w-5 h-5 text-destructive"></i>
+            </div>
+        </div>
+        <p class="text-muted text-sm font-medium mb-1">Alertas Inventario</p>
+        <h3 class="text-2xl font-bold text-foreground">3 <span class="text-sm font-normal text-muted">ítems</span></h3>
+    </div>
+</div>
+
+<div class="bg-card border border-border rounded-2xl p-6 shadow-lg">
+    <h3 class="text-lg font-bold text-foreground mb-4">Actividad Reciente</h3>
+    <div class="text-muted text-sm flex flex-col gap-3">
+        <p>🕒 Hace 2 min - Mesa 4 pagó su cuenta ($45.00)</p>
+        <p>🕒 Hace 5 min - Nuevo pedido ingresado para Mesa 12</p>
+        <p>🕒 Hace 15 min - Inventario actualizado: Cerveza Artesanal</p>
+    </div>
+</div>
