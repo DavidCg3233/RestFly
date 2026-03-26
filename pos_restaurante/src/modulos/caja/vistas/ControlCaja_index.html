@@ -1,0 +1,167 @@
+<div class="flex flex-col gap-6 pb-10 text-[var(--texto)]" id="app-control-caja">
+
+    <div id="caja-cerrada-view" class="hidden animate-in fade-in duration-500">
+        <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl shadow-sm text-center py-12 flex flex-col items-center justify-center">
+            <i data-lucide="alert-circle" class="w-12 h-12 text-[var(--texto-apagado)] mx-auto mb-4"></i>
+            <h2 class="text-xl font-bold text-[var(--tarjeta-texto)] mb-2">Caja Cerrada</h2>
+            <p class="text-[var(--texto-apagado)] text-sm mb-6">Abre la caja para comenzar el turno y registrar ventas.</p>
+            <button onclick="abrirModalApertura()" class="px-6 py-2.5 rounded-lg bg-[var(--primario)] text-[var(--primario-texto)] font-bold hover:opacity-90 shadow-md transition-all">
+                Abrir Caja
+            </button>
+        </div>
+    </div>
+
+    <div id="caja-abierta-view" class="hidden flex-col gap-6 animate-in fade-in duration-500">
+        
+        <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl shadow-sm">
+            <div class="p-6 border-b border-[var(--borde)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="check-circle-2" class="w-6 h-6 text-[var(--primario)]"></i>
+                    <div>
+                        <h2 class="text-lg font-bold text-[var(--tarjeta-texto)]">Caja Abierta</h2>
+                        <p class="text-sm text-[var(--texto-apagado)] mt-0.5" id="caja-info-apertura">Sesión iniciada: --</p>
+                    </div>
+                </div>
+                <button onclick="abrirModalCierre()" class="px-4 py-2 rounded-lg bg-[var(--peligro)] text-white font-bold hover:opacity-90 shadow-sm transition-all text-sm whitespace-nowrap">
+                    Cerrar Caja
+                </button>
+            </div>
+            
+            <div class="p-6 grid grid-cols-2 sm:grid-cols-4 gap-6">
+                <div>
+                    <p class="text-sm text-[var(--texto-apagado)] font-medium mb-1">Monto Inicial</p>
+                    <p class="text-2xl font-black text-[var(--tarjeta-texto)]" id="stat-inicial">$0.00</p>
+                </div>
+                <div>
+                    <p class="text-sm text-[var(--texto-apagado)] font-medium mb-1">Ventas</p>
+                    <p class="text-2xl font-black text-[var(--primario)]" id="stat-ventas">$0.00</p>
+                </div>
+                <div>
+                    <p class="text-sm text-[var(--texto-apagado)] font-medium mb-1">Movimientos</p>
+                    <p class="text-2xl font-black text-[var(--tarjeta-texto)]" id="stat-movimientos">$0.00</p>
+                </div>
+                <div>
+                    <p class="text-sm text-[var(--texto-apagado)] font-medium mb-1">Efectivo Esperado</p>
+                    <p class="text-2xl font-black text-[var(--tarjeta-texto)]" id="stat-esperado">$0.00</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-2 bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl shadow-sm flex flex-col">
+                <div class="p-5 border-b border-[var(--borde)] flex flex-row items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-[var(--tarjeta-texto)]">Registro de Movimientos</h3>
+                        <p class="text-xs text-[var(--texto-apagado)]" id="movimientos-count">0 movimiento(s)</p>
+                    </div>
+                    <button onclick="abrirModalMov()" class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--secundario)] text-[var(--secundario-texto)] border border-[var(--borde)] font-medium hover:opacity-80 transition-all text-sm">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Agregar
+                    </button>
+                </div>
+                <div class="p-5 flex-1">
+                    <div class="flex flex-col gap-2 max-h-80 overflow-y-auto custom-scrollbar pr-2" id="lista-movimientos">
+                        </div>
+                </div>
+            </div>
+
+            <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl shadow-sm flex flex-col">
+                <div class="p-5 border-b border-[var(--borde)]">
+                    <h3 class="flex items-center gap-2 text-lg font-semibold text-[var(--tarjeta-texto)]">
+                        <i data-lucide="wallet" class="w-5 h-5 text-[var(--primario)]"></i> Resumen Ventas
+                    </h3>
+                </div>
+                <div class="p-5 flex flex-col gap-4">
+                    <div>
+                        <p class="text-xs font-medium text-[var(--texto-apagado)] mb-1">Total de Ventas</p>
+                        <p class="text-3xl font-black text-[var(--primario)]" id="resumen-total-ventas">$0.00</p>
+                    </div>
+                    <div class="border-t border-[var(--borde)] pt-4">
+                        <p class="text-xs font-bold text-[var(--texto-apagado)] uppercase tracking-wider mb-3">Método de Pago</p>
+                        <div class="flex flex-col gap-2" id="lista-resumen-ventas">
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-apertura" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-[var(--fondo)] border border-[var(--borde)] w-full max-w-md rounded-xl shadow-2xl flex flex-col">
+            <div class="bg-[var(--secundario)] border-b border-[var(--borde)] p-5 flex justify-between items-center rounded-t-xl">
+                <h3 class="text-lg font-bold text-[var(--texto)]">Apertura de Caja</h3>
+                <button onclick="cerrarModalApertura()" class="text-[var(--texto-apagado)] hover:text-[var(--texto)]"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-[var(--texto)]">Monto Inicial ($)</label>
+                    <input type="number" id="apertura-monto" placeholder="0.00" class="w-full h-10 px-3 rounded-md border border-[var(--borde)] bg-[var(--tarjeta)] text-[var(--tarjeta-texto)] focus:outline-none focus:border-[var(--primario)]">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button onclick="cerrarModalApertura()" class="flex-1 py-2 rounded-lg font-medium text-sm bg-[var(--secundario)] text-[var(--secundario-texto)] hover:opacity-80">Cancelar</button>
+                    <button onclick="procesarApertura()" class="flex-1 py-2 rounded-lg font-bold text-sm bg-[var(--primario)] text-[var(--primario-texto)] hover:opacity-90">Abrir Caja</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-cierre" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-[var(--fondo)] border border-[var(--borde)] w-full max-w-md rounded-xl shadow-2xl flex flex-col">
+            <div class="bg-[var(--secundario)] border-b border-[var(--borde)] p-5 flex justify-between items-center rounded-t-xl">
+                <h3 class="text-lg font-bold text-[var(--texto)]">Cierre de Caja</h3>
+                <button onclick="cerrarModalCierre()" class="text-[var(--texto-apagado)] hover:text-[var(--texto)]"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <div class="p-4 bg-[var(--tarjeta)] rounded-lg border border-[var(--borde)] text-center">
+                    <p class="text-xs text-[var(--texto-apagado)] font-medium mb-1">Efectivo Esperado</p>
+                    <p class="text-3xl font-black text-[var(--tarjeta-texto)]" id="cierre-esperado">$0.00</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-[var(--texto)]">Efectivo Contado Real ($)</label>
+                    <input type="number" id="cierre-real" oninput="calcularDiferencia()" placeholder="0.00" class="w-full h-10 px-3 rounded-md border border-[var(--borde)] bg-[var(--tarjeta)] text-[var(--tarjeta-texto)] text-lg font-bold focus:outline-none focus:border-[var(--primario)]">
+                </div>
+                
+                <div id="cierre-diferencia-container" class="hidden p-3 rounded-lg border">
+                    <p class="text-xs font-medium mb-1 text-[var(--texto)]">Diferencia</p>
+                    <p class="text-xl font-black" id="cierre-diferencia">$0.00</p>
+                </div>
+
+                <div class="flex gap-2 pt-2 mt-2">
+                    <button onclick="cerrarModalCierre()" class="flex-1 py-2 rounded-lg font-medium text-sm bg-[var(--secundario)] text-[var(--secundario-texto)] hover:opacity-80">Cancelar</button>
+                    <button onclick="procesarCierre()" class="flex-1 py-2 rounded-lg font-bold text-sm bg-[var(--peligro)] text-white hover:opacity-90 shadow-sm">Confirmar Cierre</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-mov" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-[var(--fondo)] border border-[var(--borde)] w-full max-w-md rounded-xl shadow-2xl flex flex-col">
+            <div class="bg-[var(--secundario)] border-b border-[var(--borde)] p-5 flex justify-between items-center rounded-t-xl">
+                <h3 class="text-lg font-bold text-[var(--texto)]">Nuevo Movimiento</h3>
+                <button onclick="cerrarModalMov()" class="text-[var(--texto-apagado)] hover:text-[var(--texto)]"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-[var(--texto)]">Tipo de Movimiento</label>
+                    <div class="flex gap-2">
+                        <button id="btn-mov-entrada" onclick="seleccionarTipoMov('entrada')" class="flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all border bg-[var(--primario)] text-[var(--primario-texto)] border-[var(--primario)] shadow-sm">Entrada</button>
+                        <button id="btn-mov-salida" onclick="seleccionarTipoMov('salida')" class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all border bg-[var(--secundario)] text-[var(--secundario-texto)] border-[var(--borde)]">Salida</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-[var(--texto)]">Monto ($)</label>
+                    <input type="number" id="mov-monto" placeholder="0.00" class="w-full h-10 px-3 rounded-md border border-[var(--borde)] bg-[var(--tarjeta)] text-[var(--tarjeta-texto)] focus:outline-none focus:border-[var(--primario)]">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-[var(--texto)]">Descripción</label>
+                    <input type="text" id="mov-desc" placeholder="Ej: Pago a proveedor..." class="w-full h-10 px-3 rounded-md border border-[var(--borde)] bg-[var(--tarjeta)] text-[var(--tarjeta-texto)] focus:outline-none focus:border-[var(--primario)]">
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button onclick="cerrarModalMov()" class="flex-1 py-2 rounded-lg font-medium text-sm bg-[var(--secundario)] text-[var(--secundario-texto)] hover:opacity-80">Cancelar</button>
+                    <button onclick="procesarMovimiento()" class="flex-1 py-2 rounded-lg font-bold text-sm bg-[var(--primario)] text-[var(--primario-texto)] hover:opacity-90">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

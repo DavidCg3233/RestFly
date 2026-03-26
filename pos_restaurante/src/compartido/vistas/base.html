@@ -15,6 +15,7 @@
             document.documentElement.classList.add('dark');
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -52,14 +53,44 @@
         <nav class="flex-1 p-4 flex flex-col gap-2 overflow-y-auto">
             <p class="text-[10px] font-bold text-muted uppercase tracking-wider px-3 mb-1">Módulos Principales</p>
             
-            <button onclick="cargarModulo('../../modulos/tablero/vistas/contenido_tablero.html', 'Tablero General')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all hover:bg-primary/10 hover:text-primary border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+            <button onclick="cargarModulo('../../modulos/tablero/vistas/contenido_tablero.html', 'Tablero General')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Tablero</span>
             </button>
 
-            <button onclick="cargarModulo('../../modulos/mesas/vistas/contenido_mesas.html', 'Mesas & Pedidos')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent">
+            <button onclick="cargarModulo('../../modulos/usuarios/vistas/index.html', 'Gestión de Usuarios')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+                <i data-lucide="users" class="w-4 h-4"></i>
+                <span class="flex-1 text-left">Usuarios</span>
+            </button>
+
+            <button onclick="cargarModulo('../../modulos/mesas/vistas/mesas.index.html', 'Mesas y Pedidos', '../../modulos/mesas/controladores/mesas_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="map" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Mesas & Pedidos</span>
+            </button>
+
+            <button onclick="cargarModulo('../../modulos/cocina/vistas/cocina.index.html', 'Comandas Cocina/Bar', '../../modulos/cocina/controladores/cocina_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+                <i data-lucide="chef-hat" class="w-4 h-4"></i>
+                <span class="flex-1 text-left">Cocina & Bar</span>
+            </button>       
+
+            <button onclick="cargarModulo('../../modulos/inventario/vistas/inventario.index.html', 'Inventario', '../../modulos/inventario/controladores/inventario_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+                <i data-lucide="package" class="w-4 h-4"></i>
+                <span class="flex-1 text-left">Inventario</span>
+            </button>
+
+            <button onclick="cargarModulo('../../modulos/caja/vistas/facturacion.index.html', 'Caja y Facturación', '../../modulos/facturacion/controladores/facturacion_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+                <span class="flex-1 text-left">Facturación</span>
+            </button>
+
+            <button onclick="cargarModulo('../../modulos/caja/vistas/ControlCaja_index.html', 'Control de Caja', '../../modulos/caja/controladores/ControlCaja_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+                <span class="flex-1 text-left">Control de Caja</span>
+            </button>
+
+            <button onclick="cargarModulo('../../modulos/reportes/vistas/reportes.index.html', 'Reportes'); setTimeout(() => { window.iniciarReportesRestFly() }, 300);" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                <span class="flex-1 text-left">Reportes</span>
             </button>
         </nav>
 
@@ -79,11 +110,11 @@
                 <button onclick="alternarTema()" class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-lg text-muted hover:text-foreground hover:bg-secondary transition-colors">
                     <div class="hidden dark:flex items-center gap-2 w-full">
                         <i data-lucide="sun" class="w-4 h-4"></i>
-                        Modo Claro
+                        <span id="texto-tema-claro">Modo Claro</span>
                     </div>
                     <div class="flex dark:hidden items-center gap-2 w-full">
                         <i data-lucide="moon" class="w-4 h-4"></i>
-                        Modo Oscuro
+                        <span id="texto-tema-oscuro">Modo Oscuro</span>
                     </div>
                 </button>
 
@@ -126,7 +157,7 @@
         </header>
 
         <main id="contenedor-principal" class="flex-1 overflow-y-auto p-6 z-10 relative">
-            </main>
+        </main>
     </div>
 
     <script>
@@ -169,32 +200,58 @@
             window.location.replace("../../modulos/login/vistas/index.html"); 
         }
 
-        // 5. Carga Dinámica de Módulos
-        async function cargarModulo(ruta, titulo) {
+        // 5. Carga Dinámica de Módulos (Corregida e Inteligente)
+        async function cargarModulo(rutaHtml, tituloModulo, rutaJs = null) {
             const contenedor = document.getElementById('contenedor-principal');
-            const tituloUI = document.getElementById('titulo-modulo');
+            const tituloEl = document.getElementById('titulo-modulo');
             
-            contenedor.innerHTML = '<div class="flex h-full items-center justify-center text-primary"><i data-lucide="loader-2" class="w-8 h-8 animate-spin"></i></div>';
-            lucide.createIcons();
-
             try {
-                const respuesta = await fetch(ruta);
-                if (!respuesta.ok) throw new Error('No se pudo cargar el archivo');
-                
-                const html = await respuesta.text();
-                contenedor.innerHTML = html;
-                
-                if (titulo) tituloUI.textContent = titulo;
-                lucide.createIcons();
-                
-                if (window.innerWidth < 1024) {
-                    document.getElementById('barra-lateral').classList.add('-translate-x-full');
-                    document.getElementById('fondo-movil').classList.add('hidden');
+                // Actualizar el título en el header
+                if (tituloEl && tituloModulo) {
+                    tituloEl.textContent = tituloModulo;
                 }
 
+                // 1. Cargamos la vista HTML
+                const respuesta = await fetch(rutaHtml);
+                if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status} - No se encontró: ${rutaHtml}`);
+                const html = await respuesta.text();
+                
+                // 2. Inyectamos el HTML
+                contenedor.innerHTML = html;
+
+                // Si hay scripts dentro del HTML que se inyectó, forzamos su ejecución
+                // (Por si alguno de tus otros módulos todavía tiene etiquetas <script> adentro)
+                const scripts = contenedor.querySelectorAll('script');
+                scripts.forEach(script => {
+                    const nuevoScript = document.createElement('script');
+                    Array.from(script.attributes).forEach(attr => nuevoScript.setAttribute(attr.name, attr.value));
+                    nuevoScript.appendChild(document.createTextNode(script.innerHTML));
+                    script.parentNode.replaceChild(nuevoScript, script);
+                });
+
+                // 3. Cargamos el Controlador JS externo (si se pasó por parámetro)
+                if (rutaJs) {
+                    const viejoScript = document.getElementById('script-modulo-activo');
+                    if (viejoScript) viejoScript.remove();
+
+                    const nuevoScript = document.createElement('script');
+                    nuevoScript.src = rutaJs;
+                    nuevoScript.id = 'script-modulo-activo';
+                    document.body.appendChild(nuevoScript);
+                }
+
+                // Re-inicializar iconos para el contenido nuevo
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+
             } catch (error) {
-                console.error("Error:", error);
-                contenedor.innerHTML = `<div class="text-center text-destructive p-10 font-bold">Error al cargar módulo.</div>`;
+                console.error("Error cargando el módulo:", error);
+                contenedor.innerHTML = `
+                    <div class="p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
+                        <h3 class="font-bold flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> Error al cargar</h3>
+                        <p class="text-sm mt-1">${error.message}</p>
+                    </div>
+                `;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             }
         }
 
@@ -202,6 +259,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             cargarModulo('../../modulos/tablero/vistas/contenido_tablero.html', 'Tablero General');
         });
+
     </script>
+    <script src="../../modulos/reportes/controladores/Reportes_frontend.js"></script>
 </body>
 </html>

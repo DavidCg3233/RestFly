@@ -1,1 +1,98 @@
-# Archivo index.html del m�dulo inventario
+<div class="flex flex-col gap-6 pb-10" id="app-inventario">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+        <div>
+            <h2 class="text-2xl font-bold text-foreground">Control de Inventario</h2>
+            <p class="text-muted text-sm mt-1" id="inv-count-text">0 insumos registrados</p>
+        </div>
+        <button onclick="abrirModalInventario()" class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-sm font-medium transition-colors">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Nuevo Insumo
+        </button>
+    </div>
+
+    <div id="inv-alert-container" class="hidden animate-in slide-in-from-top-2"></div>
+
+    <div class="flex flex-col sm:flex-row gap-3">
+        <input 
+            type="text" 
+            id="inv-search" 
+            placeholder="Buscar insumo o proveedor..." 
+            class="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 max-w-xs"
+            oninput="filtrarInventario()"
+        />
+        <div class="flex flex-wrap gap-2" id="inv-filters-container">
+            </div>
+    </div>
+
+    <div class="bg-card border border-border rounded-xl overflow-x-auto shadow-sm">
+        <table class="w-full text-sm text-left text-muted">
+            <thead class="text-xs text-muted uppercase bg-secondary/30 border-b border-border">
+                <tr>
+                    <th class="px-4 py-3 font-medium">Insumo</th>
+                    <th class="px-4 py-3 font-medium">Categoría</th>
+                    <th class="px-4 py-3 font-medium">Stock Actual</th>
+                    <th class="px-4 py-3 font-medium">Stock Mínimo</th>
+                    <th class="px-4 py-3 font-medium w-32">Nivel</th>
+                    <th class="px-4 py-3 font-medium">Estado</th>
+                    <th class="px-4 py-3 font-medium">Proveedor</th>
+                    <th class="px-4 py-3 font-medium text-right">Editar</th>
+                </tr>
+            </thead>
+            <tbody id="inv-table-body" class="divide-y divide-border">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="inv-modal" class="fixed inset-0 z-50 hidden bg-background/80 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200">
+        <div class="bg-card border border-border w-full max-w-md rounded-xl shadow-lg flex flex-col scale-95 transition-transform" id="inv-modal-content">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-border">
+                <h3 class="text-lg font-semibold text-foreground" id="inv-modal-title">Nuevo Insumo</h3>
+                <button onclick="cerrarModalInventario()" class="text-muted hover:text-foreground transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="flex flex-col gap-4 p-5">
+                <input type="hidden" id="inv-form-id">
+                
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-muted text-sm font-medium">Nombre</label>
+                    <input type="text" id="inv-form-name" placeholder="Nombre del insumo" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-muted text-sm font-medium">Stock actual</label>
+                        <input type="number" id="inv-form-current" value="0" min="0" step="0.01" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-muted text-sm font-medium">Stock mínimo</label>
+                        <input type="number" id="inv-form-min" value="1" min="0" step="0.01" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-muted text-sm font-medium">Unidad</label>
+                        <input type="text" id="inv-form-unit" placeholder="kg, lt, paq..." class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-muted text-sm font-medium">Categoría</label>
+                        <select id="inv-form-category" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+                            </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-muted text-sm font-medium">Proveedor</label>
+                    <input type="text" id="inv-form-supplier" placeholder="Nombre del proveedor" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-border bg-secondary/20 rounded-b-xl">
+                <button onclick="cerrarModalInventario()" class="px-4 py-2 text-sm font-medium text-muted hover:text-foreground border border-border rounded-lg transition-colors">Cancelar</button>
+                <button onclick="guardarInsumo()" id="inv-btn-save" class="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors">Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+</div>

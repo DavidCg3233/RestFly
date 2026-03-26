@@ -1,7 +1,7 @@
 /* =========================================
-   VARIABLES GLOBALES (MODO CLARO)
+  VARIABLES GLOBALES (MODO CLARO)
    ========================================= */
-   :root {
+  :root {
     --fondo: oklch(0.98 0 0);           /* Blanco casi puro */
     --texto: oklch(0.12 0 0);           /* Tu negro original ahora es el texto */
     --tarjeta: oklch(1 0 0);            /* Blanco total */
@@ -16,7 +16,7 @@
   }
   
   /* =========================================
-     VARIABLES MODO OSCURO (Tus Colores Originales)
+  VARIABLES MODO OSCURO 
      ========================================= */
   .dark {
     --fondo: oklch(0.12 0 0);           /* El fondo que definimos */

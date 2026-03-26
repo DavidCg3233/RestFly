@@ -1,0 +1,92 @@
+<div class="flex flex-col gap-6 w-full pb-10">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-foreground">Gestión de Usuarios</h2>
+            <p id="contador-usuarios" class="text-muted text-sm mt-1">0 usuarios registrados</p>
+        </div>
+        <button onclick="abrirModalUsuario()" class="h-10 px-4 bg-primary text-primary-foreground font-medium rounded-lg hover:brightness-110 active:scale-[0.97] transition-all flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Nuevo Usuario
+        </button>
+    </div>
+
+    <input type="text" id="buscador-usuarios" placeholder="Buscar por nombre, correo o rol..." 
+        class="w-full max-w-md bg-card border border-border text-foreground h-10 px-4 rounded-lg focus:outline-none focus:border-primary transition-all placeholder:text-muted/50">
+
+    <div class="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-secondary/30 text-muted border-b border-border">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">Nombre</th>
+                        <th class="px-4 py-3 font-medium">Correo</th>
+                        <th class="px-4 py-3 font-medium">Rol</th>
+                        <th class="px-4 py-3 font-medium">Estado</th>
+                        <th class="px-4 py-3 font-medium text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-usuarios-body" class="divide-y divide-border">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-card border border-border rounded-xl p-6 shadow-sm mt-4">
+        <div class="flex items-center gap-2 mb-4">
+            <i data-lucide="shield-check" class="w-5 h-5 text-primary"></i>
+            <h3 class="text-lg font-semibold text-foreground">Matriz de Permisos</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead id="matriz-head">
+                    </thead>
+                <tbody id="matriz-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modal-usuario" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="cerrarModalUsuario()"></div>
+    
+    <div class="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md relative z-10 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div class="px-6 py-4 border-b border-border">
+            <h3 id="modal-titulo" class="text-lg font-bold text-foreground">Nuevo Usuario</h3>
+        </div>
+        
+        <form id="form-usuario" class="p-6 flex flex-col gap-4">
+            <input type="hidden" id="usuario-id">
+            
+            <div class="flex flex-col gap-1.5">
+                <label class="text-muted text-sm">Nombre completo</label>
+                <input type="text" id="usuario-nombre" required class="w-full bg-secondary border border-border text-foreground h-10 px-3 rounded-lg focus:outline-none focus:border-primary transition-all">
+            </div>
+            
+            <div class="flex flex-col gap-1.5">
+                <label class="text-muted text-sm">Correo electrónico</label>
+                <input type="email" id="usuario-correo" required class="w-full bg-secondary border border-border text-foreground h-10 px-3 rounded-lg focus:outline-none focus:border-primary transition-all">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-muted text-sm">Rol</label>
+                <div id="contenedor-roles" class="grid grid-cols-2 gap-2">
+                    </div>
+            </div>
+
+            <div class="flex items-center gap-3 mt-2 cursor-pointer w-max" onclick="alternarEstadoUsuario()">
+                <div id="toggle-estado" class="relative w-10 h-5 rounded-full bg-primary transition-colors">
+                    <span id="toggle-bola" class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform translate-x-5"></span>
+                </div>
+                <span id="texto-estado" class="text-sm text-muted">Usuario activo</span>
+            </div>
+        </form>
+
+        <div class="px-6 py-4 border-t border-border bg-secondary/20 flex justify-end gap-3">
+            <button onclick="cerrarModalUsuario()" class="px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-secondary hover:text-foreground transition-colors border border-border">Cancelar</button>
+            <button onclick="guardarUsuario()" class="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:brightness-110 transition-colors">Guardar cambios</button>
+        </div>
+    </div>
+</div>
+
+<script src="../../modulos/usuarios/controladores/usuarios_frontend.js"></script>
