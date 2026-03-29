@@ -1,0 +1,42 @@
+@startuml
+start
+
+:Gerente accede al módulo de dashboard;
+
+:Solicitar datos al sistema;
+
+:Consultar base de datos;
+
+:Obtener métricas;
+:Ventas del día;
+:Productos más vendidos;
+:Flujo de caja;
+
+:Mostrar dashboard;
+
+if (¿Desea generar reporte?) then (Sí)
+
+    :Seleccionar tipo de reporte;
+    :Ventas / Inventario;
+
+    :Ingresar rango de fechas;
+
+    if (¿Fechas válidas?) then (Sí)
+
+        :Consultar datos filtrados;
+
+        :Generar reporte;
+
+        :Mostrar reporte;
+
+    else (No)
+        :Mostrar error en fechas;
+    endif
+
+endif
+
+:Registrar acción en auditoría;
+:Guardar usuario, acción, fecha y hora;
+
+stop
+@enduml

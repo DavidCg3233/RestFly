@@ -1,40 +1,55 @@
 /* =========================================
-  VARIABLES GLOBALES (MODO CLARO)
-   ========================================= */
-  :root {
-    --fondo: oklch(0.98 0 0);           /* Blanco casi puro */
-    --texto: oklch(0.12 0 0);           /* Tu negro original ahora es el texto */
-    --tarjeta: oklch(1 0 0);            /* Blanco total */
-    --tarjeta-texto: oklch(0.12 0 0);
-    --primario: oklch(0.75 0.183 66);   /* Tu Rojo RestFly (No cambia) */
-    --primario-texto: oklch(0.98 0 0);  /* Texto claro sobre el rojo */
-    --secundario: oklch(0.92 0 0);      /* Gris muy suave */
-    --secundario-texto: oklch(0.25 0 0);
-    --texto-apagado: oklch(0.55 0 0);
-    --peligro: oklch(0.6 0.22 25);
-    --borde: oklch(0.9 0 0);            /* Borde sutil para luz */
-  }
+  VARIABLES GLOBALES (MODO CLARO MEJORADO)
+========================================= */
+:root {
+  --fondo: oklch(0.96 0.01 260);        /* Blanco suave (no puro) */
+  --texto: oklch(0.2 0.01 260);         /* Negro suavizado */
   
-  /* =========================================
-  VARIABLES MODO OSCURO 
-     ========================================= */
-  .dark {
-    --fondo: oklch(0.12 0 0);           /* El fondo que definimos */
-    --texto: oklch(0.95 0 0);           /* El texto que definimos */
-    --tarjeta: oklch(0.16 0 0);
-    --tarjeta-texto: oklch(0.95 0 0);
-    --primario: oklch(0.75 0.183 66);   /* Tu Rojo RestFly */
-    --primario-texto: oklch(0.1 0 0);
-    --secundario: oklch(0.22 0 0);
-    --secundario-texto: oklch(0.85 0 0);
-    --texto-apagado: oklch(0.55 0 0);
-    --peligro: oklch(0.5 0.22 25);
-    --borde: oklch(0.25 0 0);
-  }
-  
-  body {
-    background-color: var(--fondo);
-    color: var(--texto);
-    font-family: system-ui, -apple-system, sans-serif;
-    transition: background-color 0.3s ease, color 0.3s ease;
-  }
+  --tarjeta: oklch(0.99 0.005 260);     /* Blanco con leve tono */
+  --tarjeta-texto: oklch(0.2 0.01 260);
+
+  --primario: oklch(0.75 0.183 66);     /* Rojo RestFly */
+  --primario-texto: oklch(0.98 0 0);
+
+  --secundario: oklch(0.93 0.01 260);   /* Gris más usable */
+  --secundario-texto: oklch(0.35 0.01 260);
+
+  --texto-apagado: oklch(0.55 0.01 260);
+
+  --peligro: oklch(0.6 0.22 25);
+
+  --borde: oklch(0.88 0.01 260);        /* Borde más natural */
+}
+
+/* =========================================
+  VARIABLES MODO OSCURO (AJUSTE FINO)
+========================================= */
+.dark {
+  --fondo: oklch(0.12 0 0);
+  --texto: oklch(0.92 0.01 260);
+
+  --tarjeta: oklch(0.16 0.01 260);
+  --tarjeta-texto: oklch(0.92 0.01 260);
+
+  --primario: oklch(0.75 0.183 66);
+  --primario-texto: oklch(0.12 0 0);
+
+  --secundario: oklch(0.22 0.01 260);
+  --secundario-texto: oklch(0.85 0.01 260);
+
+  --texto-apagado: oklch(0.6 0.01 260);
+
+  --peligro: oklch(0.5 0.22 25);
+
+  --borde: oklch(0.28 0.01 260);
+}
+
+/* =========================================
+  BASE
+========================================= */
+body {
+  background-color: var(--fondo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
