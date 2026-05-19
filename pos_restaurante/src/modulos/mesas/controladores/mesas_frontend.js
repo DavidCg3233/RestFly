@@ -32,11 +32,10 @@ let state = {
     activeTab: "cocina"
 };
 
-// ACÁ ESTÁ LA MAGIA: Renombramos init() a window.initMesas()
-window.initMesas = function() {
+function init() {
     renderFiltros();
     renderMesas();
-};
+}
 
 function renderFiltros() {
     const container = document.getElementById('contenedor-filtros');
@@ -87,7 +86,7 @@ function renderMesas() {
                     <div class="flex justify-between items-start mb-4">
                         <span class="text-2xl font-black text-foreground">#${mesa.number}</span>
                         <div class="p-1.5 rounded-lg bg-background/50 border border-border">
-                            <i data-lucide="${conf.icon}" class="w-4 h-4 ${conf.text}"></i>
+                             <i data-lucide="${conf.icon}" class="w-4 h-4 ${conf.text}"></i>
                         </div>
                     </div>
                     <div class="space-y-1">
@@ -266,3 +265,5 @@ window.confirmarPedido = function() {
     cerrarModalPedido();
 };
 
+// Arrancamos la app
+init();
