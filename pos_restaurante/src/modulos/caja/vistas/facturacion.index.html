@@ -134,361 +134,351 @@
 </div>
 
 <script>
-// Archivo: src/modulos/caja/controladores/facturacion_frontend.js
-
-console.log("💰 Módulo de Facturación cargado (Vigilante Nativo de Pantalla Activo).");
-
-// --- RUTAS API (Apuntando al módulo unificado) ---
-const API_CAJA_BASE = "http://127.0.0.1:8000/api/caja";
-const API_FACTURACION = `${API_CAJA_BASE}/facturacion`;
-
-// --- ESTADO GLOBAL ---
-let estadoFacturacion = {
-    searchTerm: "",
-    selectedOrderId: null,
-    selectedPayment: "efectivo",
-    taxRate: 0.16, // 16% IVA
-    pedidosActivos: [],   // Se llenará desde BD
-    historialVentas: []   // Se llenará desde BD
-};
-
-// ==========================================
-// 1. INICIALIZACIÓN Y SEGURIDAD
-// ==========================================
-async function initFacturacion() {
-    const overlayBloqueo = document.getElementById("fac-overlay-bloqueo");
+    // Archivo: src/modulos/caja/controladores/facturacion_frontend.js
     
-    // 1. Antes de hacer nada, aseguramos que el overlay esté oculto para evitar parpadeos falsos
-    if (overlayBloqueo) {
-        overlayBloqueo.classList.add("hidden");
-        overlayBloqueo.classList.remove("flex");
-    }
-
-    // 2. Esperamos la respuesta real del backend
-    const cajaAbierta = await verificarCajaAbierta();
+    (function() {
+        console.log("💰 Módulo de Facturación cargado y blindado.");
     
-    if (!cajaAbierta) {
-        // ❌ Si está CERRADA, bloqueamos con total seguridad
-        if (overlayBloqueo) {
-            overlayBloqueo.classList.remove("hidden");
-            overlayBloqueo.classList.add("flex");
+        // --- RUTAS API ---
+        const API_CAJA_BASE = "http://127.0.0.1:8000/api/caja";
+        const API_FACTURACION = `${API_CAJA_BASE}/facturacion`;
+    
+        // --- ESTADO PRIVADO DEL MÓDULO ---
+        const estadoFacturacion = {
+            searchTerm: "",
+            selectedOrderId: null,
+            selectedPayment: "efectivo",
+            taxRate: 0.16, // 16% IVA
+            pedidosActivos: [], 
+            historialVentas: [] 
+        };
+    
+        // ==========================================
+        // 1. INICIALIZACIÓN Y SEGURIDAD
+        // ==========================================
+        async function initFacturacion() {
+            const overlayBloqueo = document.getElementById("fac-overlay-bloqueo");
+            
+            if (overlayBloqueo) {
+                overlayBloqueo.classList.add("hidden");
+                overlayBloqueo.classList.remove("flex");
+            }
+    
+            // 💡 EL CAMBIO MAGISTRAL: Verificamos la fuente de la verdad correcta
+            const cajaAbierta = await verificarCajaAbierta();
+            
+            if (!cajaAbierta) {
+                if (overlayBloqueo) {
+                    overlayBloqueo.classList.remove("hidden");
+                    overlayBloqueo.classList.add("flex");
+                }
+                if(typeof lucide !== 'undefined') lucide.createIcons();
+                return; 
+            }
+    
+            // Si la caja está abierta, traemos la data real
+            await cargarPedidosPendientesBD();
+            await cargarHistorialVentasBD();
+            
+            renderPedidosPendientes();
+            renderEstadisticas();
+            renderHistorialVentas();
+            if(typeof lucide !== 'undefined') lucide.createIcons();
         }
-        if(typeof lucide !== 'undefined') lucide.createIcons();
-        return; // Detenemos la ejecución, seguridad ante todo
-    }
-
-    // Si llegó aquí, la caja está ABIERTA. Cargamos datos reales del negocio
-    await cargarPedidosPendientesBD();
-    await cargarHistorialVentasBD();
     
-    // Renderizamos los componentes en la pantalla
-    renderPedidosPendientes();
-    renderEstadisticas();
-    renderHistorialVentas();
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-async function verificarCajaAbierta() {
-    try {
-        const response = await fetch(`${API_CAJA_BASE}/estado/`);
-        const json = await response.json();
-        
-        // Imprime en la consola F12 para ver qué responde Django en tiempo real
-        console.log("🔍 [DEBUG] Respuesta de estado de caja recibida:", json);
-        
-        // Validamos soportando ambas nomenclaturas por si acaso (estado_caja o isOpen)
-        if (json.estado === "exitoso" && json.data) {
-            if (json.data.estado_caja === "abierta" || json.data.isOpen === true) {
-                return true;
+        // 💡 NUEVA LÓGICA DE VERIFICACIÓN
+        async function verificarCajaAbierta() {
+            try {
+                // 1. Primero leemos el estado local que genera Control de Caja
+                const estadoGuardado = localStorage.getItem('restfly_estado_caja');
+                if (estadoGuardado) {
+                    const cajaLocal = JSON.parse(estadoGuardado);
+                    if (cajaLocal.isOpen === true) {
+                        console.log("✅ Facturación detectó la caja abierta localmente.");
+                        return true;
+                    }
+                }
+    
+                // 2. Opcional: Respaldo consultando al Backend si no hay estado local
+                const response = await fetch(`${API_CAJA_BASE}/estado/`);
+                const json = await response.json();
+                return (json.estado === "exitoso" && json.data && (json.data.estado_caja === "abierta" || json.data.isOpen === true));
+                
+            } catch (error) {
+                console.error("❌ Error validando el estado de la caja:", error);
+                return false; 
             }
         }
-        return false;
-    } catch (error) {
-        console.error("❌ Error validando el estado de la caja:", error);
-        return false; 
-    }
-}
-
-// ==========================================
-// 2. PETICIONES AL BACKEND (FETCH)
-// ==========================================
-async function cargarPedidosPendientesBD() {
-    try {
-        const response = await fetch(`${API_FACTURACION}/pedidos-pendientes/`);
-        const json = await response.json();
-        
-        if (json.estado === "exitoso") {
-            estadoFacturacion.pedidosActivos = json.data.pedidos;
-        } else {
-            console.error("Error del servidor al cargar pedidos:", json.mensaje);
+    
+        // ==========================================
+        // 2. PETICIONES AL BACKEND
+        // ==========================================
+        async function cargarPedidosPendientesBD() {
+            try {
+                const response = await fetch(`${API_FACTURACION}/pedidos-pendientes/`);
+                const json = await response.json();
+                if (json.estado === "exitoso") {
+                    estadoFacturacion.pedidosActivos = json.data.pedidos || [];
+                }
+            } catch (error) {
+                console.warn("⚠️ Usando datos vacíos, error de red en pedidos:", error);
+                estadoFacturacion.pedidosActivos = [];
+            }
         }
-    } catch (error) {
-        console.error("Error de conexión:", error);
-    }
-}
-
-async function cargarHistorialVentasBD() {
-    try {
-        const response = await fetch(`${API_FACTURACION}/historial-ventas/`);
-        const json = await response.json();
-        
-        if (json.estado === "exitoso") {
-            estadoFacturacion.historialVentas = json.data.ventas.map(vta => ({
-                ...vta,
-                completedAt: new Date(vta.completedAt) 
-            }));
+    
+        async function cargarHistorialVentasBD() {
+            try {
+                const response = await fetch(`${API_FACTURACION}/historial-ventas/`);
+                const json = await response.json();
+                if (json.estado === "exitoso" && json.data && json.data.ventas) {
+                    estadoFacturacion.historialVentas = json.data.ventas.map(vta => ({
+                        ...vta,
+                        completedAt: new Date(vta.completedAt) 
+                    }));
+                }
+            } catch (error) {
+                console.warn("⚠️ Usando datos vacíos, error de red en historial:", error);
+                estadoFacturacion.historialVentas = [];
+            }
         }
-    } catch (error) {
-        console.error("Error de conexión al cargar historial:", error);
-    }
-}
-
-// ==========================================
-// 3. RENDERIZADO VISUAL (DOM)
-// ==========================================
-function renderPedidosPendientes() {
-    const listContainer = document.getElementById("fac-pending-list");
-    const countText = document.getElementById("fac-pending-count");
     
-    if(!countText || !listContainer) return;
+        // ==========================================
+        // 3. RENDERIZADO VISUAL
+        // ==========================================
+        function renderPedidosPendientes() {
+            const listContainer = document.getElementById("fac-pending-list");
+            const countText = document.getElementById("fac-pending-count");
+            
+            if(!countText || !listContainer) return;
+            
+            countText.textContent = `${estadoFacturacion.pedidosActivos.length} pedido(s) pendiente(s)`;
     
-    countText.textContent = `${estadoFacturacion.pedidosActivos.length} pedido(s) pendiente(s)`;
-
-    if (estadoFacturacion.pedidosActivos.length === 0) {
-        listContainer.innerHTML = `<p class="text-sm text-muted text-center py-8">Sin pedidos pendientes de pago</p>`;
-        return;
-    }
-
-    listContainer.innerHTML = estadoFacturacion.pedidosActivos.map(order => `
-        <button onclick="abrirModalPago('${order.id}')" class="w-full flex items-center justify-between p-4 rounded-xl bg-secondary/50 hover:bg-secondary border border-border hover:border-primary/50 transition-all text-left group">
-            <div class="flex-1">
-                <p class="font-bold text-foreground text-base group-hover:text-primary transition-colors">Mesa ${order.tableNumber}</p>
-                <p class="text-xs text-muted font-medium mt-0.5">${order.items.length} artículos</p>
-            </div>
-            <div class="text-right">
-                <p class="font-black text-primary text-lg">$${order.total.toFixed(2)}</p>
-                <p class="text-xs text-muted mt-0.5 flex items-center justify-end gap-1">
-                    <i data-lucide="user" class="w-3 h-3"></i> ${order.waiter}
-                </p>
-            </div>
-        </button>
-    `).join('');
-}
-
-function renderEstadisticas() {
-    const totalSales = estadoFacturacion.historialVentas.reduce((acc, sale) => acc + sale.total, 0);
-    const totalSalesEl = document.getElementById("fac-stats-total");
-    const statsCountEl = document.getElementById("fac-stats-count");
-    const container = document.getElementById("fac-stats-methods");
+            if (estadoFacturacion.pedidosActivos.length === 0) {
+                listContainer.innerHTML = `<p class="text-sm text-[var(--texto-apagado)] text-center py-8">Sin pedidos pendientes de pago</p>`;
+                return;
+            }
     
-    if(totalSalesEl) totalSalesEl.textContent = `$${totalSales.toFixed(2)}`;
-    if(statsCountEl) statsCountEl.textContent = `${estadoFacturacion.historialVentas.length} transacción(es)`;
-    if(!container) return;
-
-    const methods = ["efectivo", "tarjeta", "transferencia"];
+            listContainer.innerHTML = estadoFacturacion.pedidosActivos.map(order => `
+                <button onclick="window.abrirModalPago('${order.id}')" class="w-full flex items-center justify-between p-4 rounded-xl bg-[var(--secundario)]/50 hover:bg-[var(--secundario)] border border-[var(--borde)] hover:border-[var(--primario)]/50 transition-all text-left group">
+                    <div class="flex-1">
+                        <p class="font-bold text-[var(--tarjeta-texto)] text-base group-hover:text-[var(--primario)] transition-colors">Mesa ${order.tableNumber}</p>
+                        <p class="text-xs text-[var(--texto-apagado)] font-medium mt-0.5">${order.items.length} artículos</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-black text-[var(--primario)] text-lg">$${order.total.toFixed(2)}</p>
+                        <p class="text-xs text-[var(--texto-apagado)] mt-0.5 flex items-center justify-end gap-1">
+                            <i data-lucide="user" class="w-3 h-3"></i> ${order.waiter}
+                        </p>
+                    </div>
+                </button>
+            `).join('');
+        }
     
-    container.innerHTML = methods.map(method => {
-        const salesOfMethod = estadoFacturacion.historialVentas.filter(s => s.paymentMethod === method);
-        const count = salesOfMethod.length;
-        const total = salesOfMethod.reduce((acc, s) => acc + s.total, 0);
-        
-        return `
-            <div class="flex justify-between items-center text-sm p-3 rounded-lg bg-secondary/30 border border-border/50">
-                <span class="text-muted font-medium capitalize flex items-center gap-2">
-                    ${method === 'efectivo' ? '<i data-lucide="dollar-sign" class="w-4 h-4"></i>' : 
-                        method === 'tarjeta' ? '<i data-lucide="credit-card" class="w-4 h-4"></i>' : 
-                        '<i data-lucide="building-2" class="w-4 h-4"></i>'}
-                    ${method}
-                </span>
-                <div class="text-right">
-                    <p class="text-foreground font-bold">$${total.toFixed(2)}</p>
-                    <p class="text-xs text-muted">${count} vta(s)</p>
+        function renderEstadisticas() {
+            const totalSales = estadoFacturacion.historialVentas.reduce((acc, sale) => acc + sale.total, 0);
+            const totalSalesEl = document.getElementById("fac-stats-total");
+            const statsCountEl = document.getElementById("fac-stats-count");
+            const container = document.getElementById("fac-stats-methods");
+            
+            if(totalSalesEl) totalSalesEl.textContent = `$${totalSales.toFixed(2)}`;
+            if(statsCountEl) statsCountEl.textContent = `${estadoFacturacion.historialVentas.length} transacción(es)`;
+            if(!container) return;
+    
+            const methods = ["efectivo", "tarjeta", "transferencia"];
+            
+            container.innerHTML = methods.map(method => {
+                const salesOfMethod = estadoFacturacion.historialVentas.filter(s => s.paymentMethod === method);
+                const count = salesOfMethod.length;
+                const total = salesOfMethod.reduce((acc, s) => acc + s.total, 0);
+                
+                return `
+                    <div class="flex justify-between items-center text-sm p-3 rounded-lg bg-[var(--secundario)]/30 border border-[var(--borde)]">
+                        <span class="text-[var(--texto-apagado)] font-medium capitalize flex items-center gap-2">
+                            ${method === 'efectivo' ? '<i data-lucide="dollar-sign" class="w-4 h-4"></i>' : 
+                              method === 'tarjeta' ? '<i data-lucide="credit-card" class="w-4 h-4"></i>' : 
+                              '<i data-lucide="building-2" class="w-4 h-4"></i>'}
+                            ${method}
+                        </span>
+                        <div class="text-right">
+                            <p class="text-[var(--tarjeta-texto)] font-bold">$${total.toFixed(2)}</p>
+                            <p class="text-xs text-[var(--texto-apagado)]">${count} vta(s)</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    
+        function renderHistorialVentas() {
+            const tbody = document.getElementById("fac-history-table");
+            const historyCountEl = document.getElementById("fac-history-count");
+            if(!tbody) return;
+            
+            const term = estadoFacturacion.searchTerm.toLowerCase();
+            const filtradas = estadoFacturacion.historialVentas.filter(sale => 
+                sale.id.toLowerCase().includes(term) || 
+                sale.waiter.toLowerCase().includes(term) ||
+                sale.tableNumber.toLowerCase().includes(term)
+            );
+    
+            if(historyCountEl) historyCountEl.textContent = `${filtradas.length} transacción(es)`;
+    
+            if (filtradas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-[var(--texto-apagado)] italic">Sin ventas registradas</td></tr>`;
+                return;
+            }
+    
+            tbody.innerHTML = filtradas.map(sale => {
+                const time = sale.completedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                return `
+                    <tr class="border-b border-[var(--borde)] hover:bg-[var(--secundario)]/40 transition-colors">
+                        <td class="py-3 px-6 font-mono font-medium text-[var(--tarjeta-texto)]">${sale.id}</td>
+                        <td class="py-3 px-6 text-[var(--tarjeta-texto)] font-medium">${sale.tableNumber}</td>
+                        <td class="py-3 px-6 text-[var(--texto-apagado)]">${sale.waiter}</td>
+                        <td class="py-3 px-6">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[var(--primario)]/10 text-[var(--primario)] capitalize border border-[var(--primario)]/20">
+                                ${sale.paymentMethod}
+                            </span>
+                        </td>
+                        <td class="py-3 px-6 text-right font-black text-[var(--primario)]">$${sale.total.toFixed(2)}</td>
+                        <td class="py-3 px-6 text-[var(--texto-apagado)] text-xs font-medium">${time}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    
+        // ==========================================
+        // 4. FUNCIONES GLOBALES (EXPUETAS PARA HTML)
+        // ==========================================
+        window.abrirModalPago = function(orderId) {
+            const order = estadoFacturacion.pedidosActivos.find(o => o.id === orderId);
+            if (!order) return;
+            
+            estadoFacturacion.selectedOrderId = orderId;
+            window.seleccionarMetodoPago('efectivo');
+    
+            document.getElementById("fac-modal-mesa").textContent = `Mesa ${order.tableNumber}`;
+            
+            const subtotal = order.total;
+            const iva = subtotal * estadoFacturacion.taxRate;
+            const totalNeto = subtotal + iva;
+    
+            document.getElementById("fac-modal-subtotal").textContent = `$${subtotal.toFixed(2)}`;
+            document.getElementById("fac-modal-iva").textContent = `$${iva.toFixed(2)}`;
+            document.getElementById("fac-modal-total").textContent = `$${totalNeto.toFixed(2)}`;
+    
+            document.getElementById("fac-modal-items").innerHTML = order.items.map(item => `
+                <div class="flex justify-between text-sm">
+                    <span class="text-[var(--texto-apagado)]"><span class="font-bold text-[var(--tarjeta-texto)]">${item.quantity}x</span> ${item.name}</span>
+                    <span class="text-[var(--tarjeta-texto)] font-medium">$${(item.price * item.quantity).toFixed(2)}</span>
                 </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderHistorialVentas() {
-    const tbody = document.getElementById("fac-history-table");
-    const historyCountEl = document.getElementById("fac-history-count");
-    if(!tbody) return;
+            `).join('');
     
-    const term = estadoFacturacion.searchTerm.toLowerCase();
-    const filtradas = estadoFacturacion.historialVentas.filter(sale => 
-        sale.id.toLowerCase().includes(term) || 
-        sale.waiter.toLowerCase().includes(term) ||
-        sale.tableNumber.toLowerCase().includes(term)
-    );
-
-    if(historyCountEl) historyCountEl.textContent = `${filtradas.length} transacción(es)`;
-
-    if (filtradas.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-muted italic">Sin ventas registradas</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = filtradas.map(sale => {
-        const time = sale.completedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        return `
-            <tr class="border-b border-border hover:bg-secondary/40 transition-colors">
-                <td class="py-3 px-6 font-mono font-medium text-foreground">${sale.id}</td>
-                <td class="py-3 px-6 text-foreground font-medium">${sale.tableNumber}</td>
-                <td class="py-3 px-6 text-muted">${sale.waiter}</td>
-                <td class="py-3 px-6">
-                    <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary capitalize border border-primary/20">
-                        ${sale.paymentMethod}
-                    </span>
-                </td>
-                <td class="py-3 px-6 text-right font-black text-primary">$${sale.total.toFixed(2)}</td>
-                <td class="py-3 px-6 text-muted text-xs font-medium">${time}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// ==========================================
-// 4. LÓGICA DEL MODAL DE COBRO
-// ==========================================
-window.abrirModalPago = function(orderId) {
-    const order = estadoFacturacion.pedidosActivos.find(o => o.id === orderId);
-    if (!order) return;
+            const modal = document.getElementById("fac-modal");
+            const content = document.getElementById("fac-modal-content");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            setTimeout(() => content.classList.replace("scale-95", "scale-100"), 10);
+        };
     
-    estadoFacturacion.selectedOrderId = orderId;
-    seleccionarMetodoPago('efectivo');
-
-    document.getElementById("fac-modal-mesa").textContent = `Mesa ${order.tableNumber}`;
+        window.cerrarModalPago = function() {
+            const modal = document.getElementById("fac-modal");
+            const content = document.getElementById("fac-modal-content");
+            content.classList.replace("scale-100", "scale-95");
+            estadoFacturacion.selectedOrderId = null;
+            setTimeout(() => {
+                modal.classList.add("hidden");
+                modal.classList.remove("flex");
+            }, 200);
+        };
     
-    const subtotal = order.total;
-    const iva = subtotal * estadoFacturacion.taxRate;
-    const totalNeto = subtotal + iva;
-
-    document.getElementById("fac-modal-subtotal").textContent = `$${subtotal.toFixed(2)}`;
-    document.getElementById("fac-modal-iva").textContent = `$${iva.toFixed(2)}`;
-    document.getElementById("fac-modal-total").textContent = `$${totalNeto.toFixed(2)}`;
-
-    document.getElementById("fac-modal-items").innerHTML = order.items.map(item => `
-        <div class="flex justify-between text-sm">
-            <span class="text-muted"><span class="font-bold text-foreground">${item.quantity}x</span> ${item.name}</span>
-            <span class="text-foreground font-medium">$${(item.price * item.quantity).toFixed(2)}</span>
-        </div>
-    `).join('');
-
-    const modal = document.getElementById("fac-modal");
-    const content = document.getElementById("fac-modal-content");
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-    setTimeout(() => content.classList.replace("scale-95", "scale-100"), 10);
-};
-
-window.cerrarModalPago = function() {
-    const modal = document.getElementById("fac-modal");
-    const content = document.getElementById("fac-modal-content");
-    content.classList.replace("scale-100", "scale-95");
-    estadoFacturacion.selectedOrderId = null;
-    setTimeout(() => {
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-    }, 200);
-};
-
-window.seleccionarMetodoPago = function(metodo) {
-    estadoFacturacion.selectedPayment = metodo;
-    const botones = ["efectivo", "tarjeta", "transferencia"];
+        window.seleccionarMetodoPago = function(metodo) {
+            estadoFacturacion.selectedPayment = metodo;
+            const botones = ["efectivo", "tarjeta", "transferencia"];
+            
+            botones.forEach(m => {
+                const btn = document.getElementById(`btn-pay-${m}`);
+                if(!btn) return;
+                
+                if (m === metodo) {
+                    btn.className = "flex flex-col items-center justify-center py-2 px-3 rounded-lg text-xs font-bold transition-all border bg-[var(--primario)] text-[var(--primario-texto)] border-[var(--primario)] shadow-sm scale-105";
+                } else {
+                    btn.className = "flex flex-col items-center justify-center py-2 px-3 rounded-lg text-xs font-medium transition-all border bg-[var(--secundario)] text-[var(--texto-apagado)] border-[var(--borde)] hover:border-[var(--primario)]/50 hover:text-[var(--tarjeta-texto)]";
+                }
+            });
+        };
     
-    botones.forEach(m => {
-        const btn = document.getElementById(`btn-pay-${m}`);
-        if(!btn) return;
-        
-        if (m === metodo) {
-            btn.className = "flex flex-col items-center justify-center py-2 px-3 rounded-lg text-xs font-bold transition-all border bg-primary text-primary-foreground border-primary shadow-sm scale-105";
-        } else {
-            btn.className = "flex flex-col items-center justify-center py-2 px-3 rounded-lg text-xs font-medium transition-all border bg-secondary text-muted border-border hover:border-primary/50 hover:text-foreground";
-        }
-    });
-};
-
-// ==========================================
-// 5. PROCESAR VENTA AL BACKEND
-// ==========================================
-window.procesarPago = async function() {
-    if (!estadoFacturacion.selectedOrderId) return;
-
-    const order = estadoFacturacion.pedidosActivos.find(o => o.id === estadoFacturacion.selectedOrderId);
-    if (!order) return;
-
-    const btnProcesar = document.querySelector('#fac-modal button.bg-primary');
-    if(btnProcesar) {
-        btnProcesar.disabled = true;
-        btnProcesar.innerText = "Procesando...";
-    }
-
-    try {
-        const response = await fetch(`${API_FACTURACION}/procesar-pago/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                id_pedido: order.id,
-                metodo_pago: estadoFacturacion.selectedPayment,
-                subtotal: order.total
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.estado === "exitoso") {
-            alert(result.mensaje); 
-            cerrarModalPago();
-            await initFacturacion(); 
-        } else {
-            alert(`Error: ${result.mensaje}`);
-        }
-    } catch (error) {
-        console.error("Error al procesar pago:", error);
-        alert("Falla de red al intentar comunicarse con el servidor.");
-    } finally {
-        if(btnProcesar) {
-            btnProcesar.disabled = false;
-            btnProcesar.innerText = "Procesar Pago";
-        }
-    }
-};
-
-// ==========================================
-// 6. BUSCADOR
-// ==========================================
-window.filtrarHistorial = function() {
-    const inputBuscador = document.getElementById("fac-search");
-    if(inputBuscador) {
-        estadoFacturacion.searchTerm = inputBuscador.value;
-        renderHistorialVentas();
-    }
-};
-
-// ==========================================
-// 7. VIGILANTE DE NAVEGACIÓN PRO (FRAMEWORK AGNOSTIC)
-// ==========================================
-function vigilarCambioDePestaña() {
-    const moduloFacturacion = document.getElementById("app-facturacion");
+        window.procesarPago = async function() {
+            if (!estadoFacturacion.selectedOrderId) return;
+            const order = estadoFacturacion.pedidosActivos.find(o => o.id === estadoFacturacion.selectedOrderId);
+            if (!order) return;
     
-    if (moduloFacturacion) {
-        // CORREGIDO: Nombre de variable unificado y punto y coma agregado
-        const esVisibleReal = moduloFacturacion.offsetParent !== null;
-        
-        if (esVisibleReal) {
-            // Si el usuario entra a la pestaña y no ha sido inicializado en este viaje:
-            if (!moduloFacturacion.dataset.inicializado) {
-                moduloFacturacion.dataset.inicializado = "true";
-                console.log("🎯 [VIGILANTE] ¡Entraste a Facturación! Trayendo datos reales...");
-                initFacturacion();
+            const btnProcesar = document.querySelector('#fac-modal button.bg-primary');
+            if(btnProcesar) {
+                btnProcesar.disabled = true;
+                btnProcesar.innerText = "Procesando...";
             }
-        } else {
-            // Si se va a estadísticas u otra pestaña, limpiamos la marca para la próxima visita
-            moduloFacturacion.removeAttribute("data-inicializado");
+    
+            try {
+                const response = await fetch(`${API_FACTURACION}/procesar-pago/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id_pedido: order.id,
+                        metodo_pago: estadoFacturacion.selectedPayment,
+                        subtotal: order.total
+                    })
+                });
+    
+                const result = await response.json();
+    
+                if (result.estado === "exitoso") {
+                    alert(result.mensaje); 
+                    window.cerrarModalPago();
+                    await initFacturacion(); 
+                } else {
+                    alert(`Error: ${result.mensaje}`);
+                }
+            } catch (error) {
+                console.error("Error al procesar pago:", error);
+                alert("Falla de red al intentar comunicarse con el servidor.");
+            } finally {
+                if(btnProcesar) {
+                    btnProcesar.disabled = false;
+                    btnProcesar.innerText = "Procesar Pago";
+                }
+            }
+        };
+    
+        window.filtrarHistorial = function() {
+            const inputBuscador = document.getElementById("fac-search");
+            if(inputBuscador) {
+                estadoFacturacion.searchTerm = inputBuscador.value;
+                renderHistorialVentas();
+            }
+        };
+    
+        // ==========================================
+        // 5. VIGILANTE DE NAVEGACIÓN (SEGURO)
+        // ==========================================
+        // En lugar de estar global, ahora vive dentro de su burbuja protectora
+        function vigilarCambioDePestaña() {
+            const moduloFacturacion = document.getElementById("app-facturacion");
+            if (moduloFacturacion) {
+                const esVisibleReal = moduloFacturacion.offsetParent !== null;
+                
+                if (esVisibleReal) {
+                    if (!moduloFacturacion.dataset.inicializado) {
+                        moduloFacturacion.dataset.inicializado = "true";
+                        initFacturacion();
+                    }
+                } else {
+                    moduloFacturacion.removeAttribute("data-inicializado");
+                }
+            }
         }
-    }
-}
-
-// Ejecuta la vigilancia cada 300ms en segundo plano sin consumir recursos
-setInterval(vigilarCambioDePestaña, 300);
-</script>
+    
+        // Intervalo asignado a una variable local para evitar fugas de memoria si recargas scripts
+        const vigilanteInterval = setInterval(vigilarCambioDePestaña, 300);
+    
+    })();
+    </script>
