@@ -54,66 +54,142 @@
     <div id="vista-platos" class="hidden flex-col gap-6 animate-in fade-in duration-300">
         
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <p class="text-muted text-sm font-medium">Gestiona los platillos que vendes al cliente.</p>
-            <button class="flex items-center justify-center gap-2 px-4 py-2 bg-foreground text-background hover:bg-foreground/90 rounded-lg text-sm font-medium transition-colors">
+            <p class="text-muted text-sm font-medium">Gestiona los platillos que vendes al cliente y sus recetas.</p>
+            <button onclick="abrirModalPlato()" class="flex items-center justify-center gap-2 px-4 py-2 bg-foreground text-background hover:bg-foreground/90 rounded-lg text-sm font-medium transition-colors">
                 <i data-lucide="utensils" class="w-4 h-4"></i> Crear Plato
             </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="platos-grid-container">
+        <div class="bg-card border border-border rounded-xl overflow-x-auto shadow-sm">
+            <table class="w-full text-sm text-left text-muted">
+                <thead class="text-xs text-muted uppercase bg-secondary/30 border-b border-border">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">Plato</th>
+                        <th class="px-4 py-3 font-medium">Categoría</th>
+                        <th class="px-4 py-3 font-medium">Precio Venta</th>
+                        <th class="px-4 py-3 font-medium">Resumen Receta</th>
+                        <th class="px-4 py-3 font-medium text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="platos-table-body" class="divide-y divide-border"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="inv-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all">
+    <div id="inv-modal-content" class="bg-card w-full max-w-md p-6 rounded-2xl shadow-lg border border-border scale-95 transition-transform">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="inv-modal-title" class="text-lg font-bold text-foreground">Nuevo Insumo</h3>
+            <button onclick="cerrarModalInventario()" class="text-muted hover:text-foreground">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <div class="flex flex-col gap-4">
+            <input type="hidden" id="inv-form-id">
+            
+            <div>
+                <label class="block text-sm font-medium text-muted mb-1">Nombre del Insumo</label>
+                <input type="text" id="inv-form-name" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+            </div>
+            
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-muted mb-1">Stock Actual</label>
+                    <input type="number" step="0.01" id="inv-form-current" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-muted mb-1">Stock Mínimo</label>
+                    <input type="number" step="0.01" id="inv-form-min" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+                </div>
             </div>
 
-    </div>
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-muted mb-1">Unidad (ej: kg, L, un)</label>
+                    <input type="text" id="inv-form-unit" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-muted mb-1">Categoría</label>
+                    <select id="inv-form-category" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+                        </select>
+                </div>
+            </div>
 
-    <div id="inv-modal" class="fixed inset-0 z-50 hidden bg-background/80 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200">
-        <div class="bg-card border border-border w-full max-w-md rounded-xl shadow-lg flex flex-col scale-95 transition-transform" id="inv-modal-content">
-            <div class="flex items-center justify-between px-5 py-4 border-b border-border">
-                <h3 class="text-lg font-semibold text-foreground" id="inv-modal-title">Nuevo Insumo</h3>
-                <button onclick="cerrarModalInventario()" class="text-muted hover:text-foreground transition-colors">
+            <div>
+                <label class="block text-sm font-medium text-muted mb-1">Proveedor (Opcional)</label>
+                <input type="text" id="inv-form-supplier" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+            </div>
+
+            <button id="inv-btn-save" onclick="guardarInsumo()" class="w-full py-2.5 mt-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-sm font-bold transition-colors">
+                Guardar Insumo
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="plato-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all">
+    <div id="plato-modal-content" class="bg-card w-full max-w-2xl p-6 rounded-2xl shadow-lg border border-border scale-95 transition-transform flex flex-col md:flex-row gap-6">
+        
+        <div class="flex-1 flex flex-col gap-4 border-b md:border-b-0 md:border-r border-border pb-6 md:pb-0 md:pr-6">
+            <div class="flex justify-between items-center mb-2">
+                <h3 id="plato-modal-title" class="text-lg font-bold text-foreground">Nuevo Plato</h3>
+                <button onclick="cerrarModalPlato()" class="md:hidden text-muted hover:text-foreground">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
             
-            <div class="flex flex-col gap-4 p-5">
-                <input type="hidden" id="inv-form-id">
-                
-                <div class="flex flex-col gap-1.5">
-                    <label class="text-muted text-sm font-medium">Nombre</label>
-                    <input type="text" id="inv-form-name" placeholder="Nombre del insumo" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-muted text-sm font-medium">Stock actual</label>
-                        <input type="number" id="inv-form-current" value="0" min="0" step="0.01" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
-                    </div>
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-muted text-sm font-medium">Stock mínimo</label>
-                        <input type="number" id="inv-form-min" value="1" min="0" step="0.01" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-muted text-sm font-medium">Unidad</label>
-                        <input type="text" id="inv-form-unit" placeholder="kg, lt, paq..." class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
-                    </div>
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-muted text-sm font-medium">Categoría</label>
-                        <select id="inv-form-category" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"></select>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-1.5">
-                    <label class="text-muted text-sm font-medium">Proveedor</label>
-                    <input type="text" id="inv-form-supplier" placeholder="Nombre del proveedor" class="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary">
+            <input type="hidden" id="plato-form-id">
+            
+            <div>
+                <label class="block text-sm font-medium text-muted mb-1">Nombre del Plato</label>
+                <input type="text" id="plato-form-name" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+            </div>
+            
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-muted mb-1">Precio Venta ($)</label>
+                    <input type="number" step="0.01" id="plato-form-price" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
                 </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-border bg-secondary/20 rounded-b-xl">
-                <button onclick="cerrarModalInventario()" class="px-4 py-2 text-sm font-medium text-muted hover:text-foreground border border-border rounded-lg transition-colors">Cancelar</button>
-                <button onclick="guardarInsumo()" id="inv-btn-save" class="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors">Guardar cambios</button>
+            <div>
+                <label class="block text-sm font-medium text-muted mb-1">Categoría</label>
+                <input type="text" id="plato-form-category" value="Comidas Rápidas" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
             </div>
+        </div>
+
+        <div class="flex-1 flex flex-col gap-4">
+            <div class="hidden md:flex justify-end">
+                <button onclick="cerrarModalPlato()" class="text-muted hover:text-foreground">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div>
+                <h4 class="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+                    <i data-lucide="list-ordered" class="w-4 h-4"></i> Ingredientes (Receta)
+                </h4>
+                
+                <div class="flex gap-2 mb-4">
+                    <div class="flex-1">
+                        <select id="plato-form-insumo" class="w-full rounded-md border border-border bg-background px-2 py-2 text-xs text-foreground focus:ring-2 focus:ring-primary/50">
+                            </select>
+                    </div>
+                    <input type="number" id="plato-form-cantidad" placeholder="Cant." class="w-20 rounded-md border border-border bg-background px-2 py-2 text-xs text-foreground focus:ring-2 focus:ring-primary/50">
+                    <button onclick="agregarInsumoReceta()" class="px-3 bg-secondary text-foreground rounded-md hover:bg-secondary/80 border border-border">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <div id="plato-receta-lista" class="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2">
+                    </div>
+            </div>
+
+            <button id="plato-btn-save" onclick="guardarPlato()" class="w-full py-2.5 mt-auto bg-foreground text-background hover:bg-foreground/90 rounded-lg text-sm font-bold transition-colors">
+                Guardar Plato Completo
+            </button>
         </div>
     </div>
 </div>

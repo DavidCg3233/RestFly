@@ -15,10 +15,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from src.modulos.login.controladores.login_backend import validar_acceso_usuario
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/login/', validar_acceso_usuario, name='api_login'),
+    
+    # Enganchamos el módulo de caja
+    # Al dejarlo como 'caja/', los endpoints calzarán exacto con el fetch('/caja/estado/'), etc., de tu JS.
+    path('api/caja/', include('src.modulos.caja.urls')),
+    path('api/inventario/', include('src.modulos.inventario.urls')),
 ]

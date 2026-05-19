@@ -1,41 +1,74 @@
 console.log("📦 Módulo de Inventario y Menú cargado.");
 
+const API_BASE = "http://127.0.0.1:8000/api/inventario";
 const INV_CATEGORIES = ["Carnes", "Mariscos", "Lácteos", "Verduras", "Bebidas", "Básicos", "Panadería"];
 
-// Estado Global (Insumos y Platos)
+// Estado Global (Nace vacío, se llena con la DB)
 let estadoInv = {
     search: "",
     filterCat: "all",
-    items: [
-        { id: "i1", name: "Carne de Res (Molida)", category: "Carnes", currentStock: 4.5, minStock: 10, unit: "kg", supplier: "Carnes Valle" },
-        { id: "i2", name: "Tomate Chonto", category: "Verduras", currentStock: 18, minStock: 20, unit: "kg", supplier: "AgroFruver" },
-        { id: "i3", name: "Queso Cheddar", category: "Lácteos", currentStock: 15, minStock: 10, unit: "tajadas", supplier: "Lácteos Pradera" },
-        { id: "i4", name: "Pan Artesanal", category: "Panadería", currentStock: 30, minStock: 20, unit: "und", supplier: "Panadería Local" }
-    ],
-    // 🔥 NUEVO: Ejemplo de cómo se estructura un Plato y su Receta
-    platos: [
-        {
-            id: "p1", 
-            nombre: "Hamburguesa Clásica", 
-            precio: 18000,
-            categoria: "Comidas Rápidas",
-            receta: [
-                { idInsumo: "i4", cantidad: 1, unidad: "und", nombre: "Pan Artesanal" },
-                { idInsumo: "i1", cantidad: 0.2, unidad: "kg", nombre: "Carne de Res (Molida)" },
-                { idInsumo: "i3", cantidad: 2, unidad: "tajadas", nombre: "Queso Cheddar" }
-            ]
-        }
-    ]
+    items: [], 
+    platos: [] // Temporalmente vacío hasta que creemos la tabla 'receta' en MySQL
 };
 
-function initInventario() {
+// ================= COMUNICACIÓN CON BACKEND (DJANGO) =================
+
+async function cargarInsumosBackend() {
+    try {
+        const res = await fetch(`${API_BASE}/insumos/`);
+        const data = await res.json();
+        
+        if (data.estado === "exitoso") {
+            // Mapeamos los campos de la DB a los campos que espera tu UI
+            estadoInv.items = data.data.map(item => ({
+                id: item.id_inventario,
+                name: item.nombre,
+                category: "Básicos", // Hardcodeado por ahora hasta unir la tabla categoría
+                currentStock: parseFloat(item.stock_actual),
+                minStock: parseFloat(item.stock_minimo),
+                unit: item.unidad_medida,
+                supplier: "Sin registrar" // Hardcodeado hasta tener tabla proveedores
+            }));
+        }
+    } catch (error) {
+        console.error("Error conectando al backend (Insumos):", error);
+    }
+}
+
+async function guardarInsumoBackend(insumoPayload) {
+    try {
+        const res = await fetch(`${API_BASE}/insumos/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(insumoPayload)
+        });
+        const data = await res.json();
+        
+        if (data.estado === "exitoso") {
+            // Si guarda en DB, recargamos la lista completa y cerramos modal
+            await cargarInsumosBackend();
+            actualizarVista();
+            cerrarModalInventario();
+        } else {
+            alert("Error del servidor: " + data.mensaje);
+        }
+    } catch (error) {
+        console.error("Error enviando datos al backend:", error);
+        alert("No se pudo conectar con el servidor.");
+    }
+}
+
+// ================= INICIALIZACIÓN =================
+
+async function initInventario() {
+    await cargarInsumosBackend(); // 1. Esperamos a que lleguen los datos de la DB
     renderFiltrosInv();
     renderOpcionesSelect();
     actualizarVista();
-    renderPlatosEjemplo(); // Renderiza la nueva pestaña
-}
+    renderTablaPlatos();}
 
-// ================= NAVEGACIÓN (TABS) =================
+// ================= CONTROLADORES DE UI (Insumos) =================
+
 window.cambiarTabInv = function(tab) {
     const vistaInsumos = document.getElementById('vista-insumos');
     const vistaPlatos = document.getElementById('vista-platos');
@@ -58,7 +91,6 @@ window.cambiarTabInv = function(tab) {
     }
 };
 
-// ================= RENDERIZADO INSUMOS (Tu código) =================
 function actualizarVista() {
     renderTablaInv();
     renderAlertasInv();
@@ -68,12 +100,17 @@ function actualizarVista() {
 
 function renderFiltrosInv() {
     const container = document.getElementById("inv-filters-container");
+    
+    // 🔥 EL GUARDRAIL: Si el HTML aún no se ha renderizado en el DOM, frenamos la ejecución
+    if (!container) return;
+    
     let html = `<button onclick="setFiltroInv('all')" class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${estadoInv.filterCat === 'all' ? 'bg-primary/20 text-primary border-primary/40' : 'bg-card border-border text-muted hover:border-primary/30'}">Todos</button>`;
     
     INV_CATEGORIES.forEach(cat => {
         const activo = estadoInv.filterCat === cat;
         html += `<button onclick="setFiltroInv('${cat}')" class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${activo ? 'bg-primary/20 text-primary border-primary/40' : 'bg-card border-border text-muted hover:border-primary/30'}">${cat}</button>`;
     });
+    
     container.innerHTML = html;
 }
 
@@ -149,45 +186,6 @@ function calcularEstado(item) {
     return { label: "OK", color: "text-green-400", bg: "bg-green-500/10 border-green-500/30", barColor: "bg-green-500" };
 }
 
-// ================= RENDERIZADO PLATOS Y RECETAS =================
-function renderPlatosEjemplo() {
-    const container = document.getElementById('platos-grid-container');
-    
-    container.innerHTML = estadoInv.platos.map(plato => {
-        // Genera los "chips" de la receta
-        const recetaHtml = plato.receta.map(ing => 
-            `<span class="inline-flex items-center text-[10px] font-medium bg-secondary text-muted-foreground px-2 py-0.5 rounded border border-border">
-                ${ing.cantidad} ${ing.unidad} de ${ing.nombre}
-            </span>`
-        ).join('');
-
-        return `
-        <div class="bg-card border border-border rounded-xl p-5 shadow-sm hover:border-primary/50 transition-colors flex flex-col h-full">
-            <div class="flex justify-between items-start mb-3">
-                <div>
-                    <span class="text-[10px] font-bold text-primary uppercase tracking-wider">${plato.categoria}</span>
-                    <h3 class="text-lg font-bold text-foreground leading-tight mt-1">${plato.nombre}</h3>
-                </div>
-                <button class="text-muted hover:text-primary transition-colors"><i data-lucide="more-vertical" class="w-5 h-5"></i></button>
-            </div>
-            
-            <p class="text-2xl font-black text-foreground mb-4">$${plato.precio.toLocaleString()}</p>
-            
-            <div class="mt-auto border-t border-border pt-3">
-                <p class="text-xs font-semibold text-muted mb-2 flex items-center gap-1">
-                    <i data-lucide="chef-hat" class="w-3.5 h-3.5"></i> Receta (Descuenta de bodega):
-                </p>
-                <div class="flex flex-wrap gap-1.5">
-                    ${recetaHtml}
-                </div>
-            </div>
-        </div>
-        `;
-    }).join('');
-}
-
-
-// ================= EVENTOS Y MODALES (Tu código) =================
 window.filtrarInventario = function() {
     estadoInv.search = document.getElementById("inv-search").value;
     renderTablaInv();
@@ -240,29 +238,199 @@ window.cerrarModalInventario = function() {
     setTimeout(() => modal.classList.add("hidden"), 200);
 };
 
+// 🔥 MODIFICADO PARA ENVIAR AL BACKEND EN LUGAR DE GUARDAR LOCAL
 window.guardarInsumo = function() {
-    const id = document.getElementById("inv-form-id").value;
+    const id = document.getElementById("inv-form-id").value; // TODO: Implementar PUT/Editar en Backend después
     const name = document.getElementById("inv-form-name").value.trim();
     const currentStock = parseFloat(document.getElementById("inv-form-current").value) || 0;
     const minStock = parseFloat(document.getElementById("inv-form-min").value) || 1;
     const unit = document.getElementById("inv-form-unit").value.trim();
-    const category = document.getElementById("inv-form-category").value;
-    const supplier = document.getElementById("inv-form-supplier").value.trim();
 
     if (!name || !unit) {
         alert("El nombre y la unidad son obligatorios.");
         return;
     }
 
-    if (id) {
-        const index = estadoInv.items.findIndex(i => i.id === id);
-        if (index !== -1) estadoInv.items[index] = { id, name, currentStock, minStock, unit, category, supplier };
-    } else {
-        estadoInv.items.push({ id: `i-${Date.now()}`, name, currentStock, minStock, unit, category, supplier });
+    // Armamos el JSON según lo que espera el controlador de Django
+    const payload = {
+        nombre: name,
+        stock_actual: currentStock,
+        stock_minimo: minStock,
+        unidad_medida: unit
+    };
+
+    // Llamamos a la API
+    guardarInsumoBackend(payload);
+};
+
+
+// ================= LÓGICA DE PLATOS Y RECETAS (Mantenida local por ahora) =================
+
+function renderTablaPlatos() {
+    const tbody = document.getElementById('platos-table-body');
+    
+    if (estadoInv.platos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-muted italic">No hay platos registrados. Crea uno nuevo.</td></tr>`;
+        return;
     }
 
-    cerrarModalInventario();
-    actualizarVista();
+    tbody.innerHTML = estadoInv.platos.map(plato => {
+        // Armamos un texto resumen de la receta (ej: "Pan Artesanal, Carne de Res...")
+        const resumenReceta = plato.receta.map(ing => ing.nombre).join(', ');
+        const recetaTexto = resumenReceta.length > 35 ? resumenReceta.substring(0, 35) + '...' : resumenReceta;
+
+        return `
+            <tr class="border-b border-border hover:bg-secondary/50 transition-colors">
+                <td class="px-4 py-3 font-medium text-foreground">
+                    <div class="flex items-center gap-2">   
+                        <i data-lucide="utensils-crossed" class="w-4 h-4 text-muted"></i>
+                        ${plato.nombre}
+                    </div>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="text-xs px-2 py-1 rounded-full bg-secondary text-muted border border-border">${plato.categoria}</span>
+                </td>
+                <td class="px-4 py-3 font-bold text-foreground">
+                    $${plato.precio.toLocaleString()}
+                </td>
+                <td class="px-4 py-3 text-xs text-muted" title="${resumenReceta}">
+                    <span class="font-bold text-foreground">${plato.receta.length} insumos:</span> ${recetaTexto || 'Sin receta'}
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <button onclick='abrirModalPlato(${JSON.stringify(plato)})' class="p-1.5 rounded-md hover:bg-secondary text-muted hover:text-foreground transition-colors" title="Editar Plato">
+                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Renderizamos los íconos nuevos
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+let recetaTemporal = []; 
+
+window.abrirModalPlato = function(plato = null) {
+    const modal = document.getElementById("plato-modal");
+    const content = document.getElementById("plato-modal-content");
+    const title = document.getElementById("plato-modal-title");
+    const btn = document.getElementById("plato-btn-save");
+
+    // Llenar select de insumos desde la data real de la BD
+    const selectInsumos = document.getElementById("plato-form-insumo");
+    selectInsumos.innerHTML = estadoInv.items.map(i => 
+        `<option value="${i.id}" data-unidad="${i.unit}" data-nombre="${i.name}">${i.name} (${i.unit})</option>`
+    ).join('');
+
+    if (plato) {
+        title.textContent = "Editar Plato";
+        btn.textContent = "Guardar cambios";
+        document.getElementById("plato-form-id").value = plato.id;
+        document.getElementById("plato-form-name").value = plato.nombre;
+        document.getElementById("plato-form-price").value = plato.precio;
+        document.getElementById("plato-form-category").value = plato.categoria;
+        recetaTemporal = JSON.parse(JSON.stringify(plato.receta)); 
+    } else {
+        title.textContent = "Nuevo Plato";
+        btn.textContent = "Crear Plato";
+        document.getElementById("plato-form-id").value = "";
+        document.getElementById("plato-form-name").value = "";
+        document.getElementById("plato-form-price").value = "";
+        document.getElementById("plato-form-category").value = "Comidas Rápidas";
+        recetaTemporal = [];
+    }
+
+    renderRecetaTemporal();
+    modal.classList.remove("hidden");
+    setTimeout(() => content.classList.replace("scale-95", "scale-100"), 10);
+};
+
+window.cerrarModalPlato = function() {
+    const modal = document.getElementById("plato-modal");
+    const content = document.getElementById("plato-modal-content");
+    content.classList.replace("scale-100", "scale-95");
+    setTimeout(() => modal.classList.add("hidden"), 200);
+};
+
+window.agregarInsumoReceta = function() {
+    const select = document.getElementById("plato-form-insumo");
+    const option = select.options[select.selectedIndex];
+    const cantidadInput = document.getElementById("plato-form-cantidad");
+    const cantidad = parseFloat(cantidadInput.value);
+
+    if (!option || isNaN(cantidad) || cantidad <= 0) {
+        alert("Selecciona un insumo y una cantidad válida mayor a 0.");
+        return;
+    }
+
+    const idInsumo = option.value;
+    
+    const existente = recetaTemporal.find(r => r.idInsumo === idInsumo);
+    if (existente) {
+        existente.cantidad += cantidad;
+    } else {
+        recetaTemporal.push({
+            idInsumo: idInsumo,
+            nombre: option.dataset.nombre,
+            unidad: option.dataset.unidad,
+            cantidad: cantidad
+        });
+    }
+
+    cantidadInput.value = ""; 
+    renderRecetaTemporal();
+};
+
+window.quitarInsumoReceta = function(idInsumo) {
+    recetaTemporal = recetaTemporal.filter(r => r.idInsumo !== idInsumo);
+    renderRecetaTemporal();
+};
+
+window.renderRecetaTemporal = function() {
+    const container = document.getElementById("plato-receta-lista");
+    if (recetaTemporal.length === 0) {
+        container.innerHTML = `<p class="text-xs text-muted italic text-center py-2">No has agregado ingredientes.</p>`;
+        return;
+    }
+
+    container.innerHTML = recetaTemporal.map(ing => `
+        <div class="flex justify-between items-center bg-background border border-border px-3 py-2 rounded-md">
+            <span class="text-sm font-medium text-foreground">${ing.nombre}</span>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-muted font-bold">${ing.cantidad} ${ing.unidad}</span>
+                <button onclick="quitarInsumoReceta('${ing.idInsumo}')" class="text-red-400 hover:text-red-500 transition-colors">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+// TODO: Cuando hagamos el backend de platos, esto enviará un POST
+window.guardarPlato = function() {
+    const id = document.getElementById("plato-form-id").value;
+    const nombre = document.getElementById("plato-form-name").value.trim();
+    const precio = parseFloat(document.getElementById("plato-form-price").value) || 0;
+    const categoria = document.getElementById("plato-form-category").value.trim();
+
+    if (!nombre || precio <= 0 || recetaTemporal.length === 0) {
+        alert("El plato debe tener nombre, precio válido y al menos un ingrediente en su receta.");
+        return;
+    }
+
+    const nuevoPlato = { id: id || `p-${Date.now()}`, nombre, precio, categoria, receta: [...recetaTemporal] };
+
+    if (id) {
+        const index = estadoInv.platos.findIndex(p => p.id === id);
+        if (index !== -1) estadoInv.platos[index] = nuevoPlato;
+    } else {
+        estadoInv.platos.push(nuevoPlato);
+    }
+
+    cerrarModalPlato();
+    renderTablaPlatos(); 
 };
 
 // Arrancar

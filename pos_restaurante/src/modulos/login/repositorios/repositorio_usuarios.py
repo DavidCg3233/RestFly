@@ -1,38 +1,40 @@
-# pos_restaurante/src/modulos/login/repositorio/repositorio_usuarios.py
+from django.contrib.auth.hashers import check_password
+from src.modulos.login.modelos.autenticacion_modelo import Usuario
 
-# Simulación fiel de la tabla 'usuarios'
-_TABLA_USUARIOS = [
-    {
-        "id_usuario": 1,
-        "nombre_usuario": "admin",
-        "contrasena_hash": "12345", 
-        "nombre_completo": "Admin RestFly",
-        "correo_electronico": "admin@restfly.com",
-        "rol_sistema": "ADMINISTRADOR",
-        "esta_activo": True
-    },
-    {
-        "id_usuario": 2,
-        "nombre_usuario": "caja1",
-        "contrasena_hash": "caja123",
-        "nombre_completo": "Ana García",
-        "correo_electronico": "ana@restfly.com",
-        "rol_sistema": "CAJERO",
-        "esta_activo": True
-    }
-]
-
+from django.contrib.auth.hashers import check_password
+# Mira cómo el import ahora apunta a tu nuevo archivo autenticacion_modelo
+from src.modulos.login.modelos.autenticacion_modelo import Usuario
 class RepositorioUsuarios:
     @staticmethod
     def buscar_por_credenciales(usuario_input, clave_input):
-        """Busca y retorna el usuario si las credenciales son correctas."""
-        for u in _TABLA_USUARIOS:
-            if (u["nombre_usuario"] == usuario_input and 
-                u["contrasena_hash"] == clave_input and 
-                u["esta_activo"]):
-                
-                # Retornamos copia sin la contraseña por seguridad
-                datos_seguros = u.copy()
-                del datos_seguros["contrasena_hash"]
+        """Busca al usuario en MySQL y valida sus credenciales."""
+        try:
+            # Traemos usuario, rol y estado de una sola vez para optimizar la consulta
+            usuario = Usuario.objects.select_related('id_rol', 'id_estado_usuario').get(username=usuario_input)
+
+            # Validar si el usuario está activo en el sistema
+            if usuario.id_estado_usuario.nombre_estado_usuario != 'activo':
+                return None
+
+            # Validar contraseña (soporta texto plano para tu primera prueba manual en Workbench, o hash)
+            es_valida = False
+            if clave_input == usuario.contrasena:
+                es_valida = True
+            elif check_password(clave_input, usuario.contrasena):
+                es_valida = True
+
+            if es_valida:
+                # Retornamos los datos estructurados para el token/sesión del frontend
+                datos_seguros = {
+                    "id_usuario": usuario.id_usuario,
+                    "nombre_usuario": usuario.username,
+                    "nombre_completo": f"{usuario.primer_nombre} {usuario.primer_apellido}",
+                    "rol_sistema": usuario.id_rol.nombre_rol.upper(), # Lo pasamos a mayúscula para que tu JS no falle
+                    "esta_activo": True
+                }
                 return datos_seguros
-        return None
+            
+            return None # Clave incorrecta
+
+        except Usuario.DoesNotExist:
+            return None # El usuario no existe en la BD

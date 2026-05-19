@@ -1,0 +1,31 @@
+restfly/
+        pos_restaurante/
+        │── configuracion/
+        │   │── __init__.py
+        │   │── asgi.py
+        │   │── settings.py
+        │   │── urls.py
+        │   │── wsgi.py
+        │
+        │── src/
+        │   │── compartido/
+        │   │   │── seguridad/
+        │   │   │── utilidades/
+        │   │   │── vistas/
+        │   │
+        │   │── modulos/
+        │       │── caja/
+        │       │   │── controladores/
+        │       │   │── modelos/
+        │       │   │── repositorios/
+        │       │   │── servicios/
+        │       │   │── vistas/
+        │       │
+        │       │── cocina/
+        │       │── inventario/
+        │       │── login/
+        │       │── mesas/
+        │       │── pedidos/
+        │       │── reportes/
+        │       │── tablero/
+        │       │── usuarios/
