@@ -54,10 +54,23 @@ class ServicioInventario:
 
     @staticmethod
     def registrar_plato(datos):
+        nombre = datos.get('nombre')
+        precio = datos.get('precio')
+        
+        # Validación temprana de campos obligatorios
+        if not nombre or precio is None:
+            raise ValueError("Faltan datos obligatorios: 'nombre' o 'precio' en el JSON.")
+
         datos_plato = {
-            "nombre": datos.get('nombre'),
-            "precio": datos.get('precio'),
+            "nombre": nombre,
+            "precio": precio,
             "categoria": datos.get('categoria', 'Comidas Rápidas')
         }
+        
         ingredientes = datos.get('receta', [])
+        
+        # Validación temprana de receta vacía
+        if not ingredientes:
+            raise ValueError("El plato no tiene ingredientes en la llave 'receta'.")
+
         RepositorioInventario.crear_plato_con_receta(datos_plato, ingredientes)

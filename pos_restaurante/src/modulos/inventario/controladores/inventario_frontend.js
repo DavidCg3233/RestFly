@@ -28,8 +28,9 @@
     // 1. INICIALIZACIÓN Y SINCRONIZACIÓN
     // ==========================================
     async function initInventario() {
-        console.log("🔄 Sincronizando inventario con el backend...");
+        console.log("🔄 Sincronizando inventario y menú con el backend...");
         await cargarInsumosBackend(); 
+        await cargarPlatosBackend(); // 🔥 Descargamos los platos de la BD
         
         renderFiltrosInv();
         renderOpcionesSelect();
@@ -81,6 +82,41 @@
             }
         } catch (error) {
             console.error("❌ Error enviando datos al backend:", error);
+            alert("No se pudo conectar con el servidor.");
+        }
+    }
+
+    async function cargarPlatosBackend() {
+        try {
+            const res = await fetch(`${API_BASE}/platos/`);
+            const data = await res.json();
+            
+            if (data.estado === "exitoso") {
+                window.estadoInv.platos = data.data; 
+            }
+        } catch (error) {
+            console.error("❌ Error conectando al backend (Platos):", error);
+            window.estadoInv.platos = [];
+        }
+    }
+
+    async function guardarPlatoBackend(platoPayload) {
+        try {
+            const res = await fetch(`${API_BASE}/platos/`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(platoPayload)
+            });
+            const data = await res.json();
+            
+            if (data.estado === "exitoso") {
+                window.cerrarModalPlato();
+                await initInventario(); // Recargamos todo para ver el plato recién guardado
+            } else {
+                alert("Error del servidor: " + data.mensaje);
+            }
+        } catch (error) {
+            console.error("❌ Error enviando plato al backend:", error);
             alert("No se pudo conectar con el servidor.");
         }
     }
@@ -204,7 +240,9 @@
         }
 
         tbody.innerHTML = window.estadoInv.platos.map(plato => {
-            const resumenReceta = plato.receta.map(ing => ing.nombre).join(', ');
+            // Manejo seguro por si el backend no devuelve la receta como array
+            const recetaArreglo = Array.isArray(plato.receta) ? plato.receta : [];
+            const resumenReceta = recetaArreglo.map(ing => ing.nombre).join(', ');
             const recetaTexto = resumenReceta.length > 35 ? resumenReceta.substring(0, 35) + '...' : resumenReceta;
 
             return `
@@ -212,7 +250,7 @@
                     <td class="px-4 py-3 font-medium text-foreground"><div class="flex items-center gap-2"><i data-lucide="utensils-crossed" class="w-4 h-4 text-muted"></i>${plato.nombre}</div></td>
                     <td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full bg-secondary text-muted border border-border">${plato.categoria}</span></td>
                     <td class="px-4 py-3 font-bold text-foreground">$${plato.precio.toLocaleString()}</td>
-                    <td class="px-4 py-3 text-xs text-muted" title="${resumenReceta}"><span class="font-bold text-foreground">${plato.receta.length} insumos:</span> ${recetaTexto || 'Sin receta'}</td>
+                    <td class="px-4 py-3 text-xs text-muted" title="${resumenReceta}"><span class="font-bold text-foreground">${recetaArreglo.length} insumos:</span> ${recetaTexto || 'Sin receta'}</td>
                     <td class="px-4 py-3 text-right">
                         <button onclick='window.abrirModalPlatoConDatos(${JSON.stringify(plato).replace(/'/g, "&apos;")})' class="p-1.5 rounded-md hover:bg-secondary text-muted hover:text-foreground transition-colors">
                             <i data-lucide="pencil" class="w-4 h-4"></i>
@@ -454,6 +492,7 @@
         renderRecetaTemporal();
     };
 
+    // 🔥 La función clave que envía el plato a Django
     window.guardarPlato = function() {
         const id = document.getElementById("plato-form-id").value;
         const nombre = document.getElementById("plato-form-name").value.trim();
@@ -465,17 +504,15 @@
             return;
         }
 
-        const nuevoPlato = { id: id || `p-${Date.now()}`, nombre, precio, categoria, receta: [...window.recetaTemporal] };
+        const payload = {
+            id: id || null, 
+            nombre: nombre,
+            precio: precio,
+            categoria: categoria,
+            receta: [...window.recetaTemporal]
+        };
 
-        if (id) {
-            const index = window.estadoInv.platos.findIndex(p => p.id === id);
-            if (index !== -1) window.estadoInv.platos[index] = nuevoPlato;
-        } else {
-            window.estadoInv.platos.push(nuevoPlato);
-        }
-
-        window.cerrarModalPlato();
-        renderTablaPlatos(); 
+        guardarPlatoBackend(payload);
     };
 
     // ==========================================

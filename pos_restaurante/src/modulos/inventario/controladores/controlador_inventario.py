@@ -31,12 +31,15 @@ class ControladorInventario:
                 data = ServicioInventario.listar_platos()
                 return JsonResponse({"estado": "exitoso", "data": data})
             except Exception as e:
+                print(f"❌ ERROR GET PLATOS: {str(e)}")
                 return JsonResponse({"estado": "error", "mensaje": str(e)}, status=500)
 
         elif request.method == 'POST':
             try:
                 body = json.loads(request.body)
+                print(f"📩 PAYLOAD RECIBIDO EN PLATOS: {body}")
                 ServicioInventario.registrar_plato(body)
                 return JsonResponse({"estado": "exitoso", "mensaje": "Plato y receta guardados correctamente."})
             except Exception as e:
+                print(f"❌ ERROR POST PLATOS: {str(e)}")
                 return JsonResponse({"estado": "error", "mensaje": str(e)}, status=400)

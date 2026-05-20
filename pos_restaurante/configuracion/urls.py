@@ -22,8 +22,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/login/', validar_acceso_usuario, name='api_login'),
     
-    # Enganchamos el módulo de caja
-    # Al dejarlo como 'caja/', los endpoints calzarán exacto con el fetch('/caja/estado/'), etc., de tu JS.
     path('api/caja/', include('src.modulos.caja.urls')),
     path('api/inventario/', include('src.modulos.inventario.urls')),
+    
+    # 🔥 CORREGIDO: Cambiado a plural 'usuarios/' para hacer match con el Frontend JS
+    path('api/usuarios/', include('src.modulos.usuarios.urls')),
 ]
