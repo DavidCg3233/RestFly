@@ -1,11 +1,14 @@
-const ESTADOS = {
+// Validamos si la data ya existe en window para no sobreescribirla al cambiar de módulo.
+// Usamos var porque let/const arrojan error de redeclaración cuando el index.html vuelve a inyectar el script.
+
+var ESTADOS = window.ESTADOS || {
     libre: { label: "Libre", bg: "bg-emerald-500/10", border: "border-emerald-500/20", dot: "bg-emerald-500", text: "text-emerald-500", icon: "check-circle" },
     ocupada: { label: "Ocupada", bg: "bg-rose-500/10", border: "border-rose-500/20", dot: "bg-rose-500", text: "text-rose-500", icon: "user" },
     reservada: { label: "Reservada", bg: "bg-amber-500/10", border: "border-amber-500/20", dot: "bg-amber-500", text: "text-amber-500", icon: "calendar" },
     limpieza: { label: "Limpieza", bg: "bg-blue-500/10", border: "border-blue-500/20", dot: "bg-blue-400", text: "text-blue-400", icon: "sparkles" },
 };
 
-let mesas = [
+var mesas = window.mesas || [
     { id: "m1", number: "01", zone: "TERRAZA", capacity: 4, status: "libre", orderId: null },
     { id: "m2", number: "02", zone: "TERRAZA", capacity: 2, status: "ocupada", orderId: "p1" },
     { id: "m3", number: "03", zone: "SALÓN VIP", capacity: 6, status: "reservada", orderId: null },
@@ -13,7 +16,7 @@ let mesas = [
     { id: "m5", number: "05", zone: "BARRA", capacity: 1, status: "libre", orderId: null },
 ];
 
-let productos = [
+var productos = window.productos || [
     { id: "c1", name: "Hamb. Premium", desc: "Angus 200g, cheddar", price: 14.00, cat: "cocina" },
     { id: "c2", name: "Tacos Al Pastor", desc: "3 unidades + piña", price: 10.50, cat: "cocina" },
     { id: "b1", name: "Coca Cola", desc: "Vidrio 350ml", price: 2.50, cat: "bar" },
@@ -21,20 +24,33 @@ let productos = [
     { id: "p1", name: "Brownie Helado", desc: "Chocolate 70%", price: 5.50, cat: "postre" },
 ];
 
-let pedidos = [
+var pedidos = window.pedidos || [
     { id: "p1", mesero: "Carlos R.", total: 24.50, items: [{ prodId: "c1", name: "Hamb. Premium", price: 14.00, qty: 1 }, { prodId: "b2", name: "Gin Tonic", price: 9.00, qty: 1 }] }
 ];
 
-let state = {
+var state = window.stateMesas || { // Renombramos internamente para que no choque con otros módulos
     filter: "all",
     activeMesaId: null,
     activeOrderId: null,
     activeTab: "cocina"
 };
 
-function init() {
-    renderFiltros();
-    renderMesas();
+// Guardamos referencias globales para la próxima vez que entres al módulo
+window.ESTADOS = ESTADOS;
+window.mesas = mesas;
+window.productos = productos;
+window.pedidos = pedidos;
+window.stateMesas = state;
+
+function initMesas() {
+    // Un pequeño respiro de 50ms asegura que el index.html haya renderizado los divs
+    setTimeout(() => {
+        const container = document.getElementById('contenedor-filtros');
+        if (container) {
+            renderFiltros();
+            renderMesas();
+        }
+    }, 50);
 }
 
 function renderFiltros() {
@@ -266,4 +282,4 @@ window.confirmarPedido = function() {
 };
 
 // Arrancamos la app
-init();
+initMesas();

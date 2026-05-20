@@ -2,25 +2,27 @@
  * Nombre del Archivo: inventario_frontend.js
  * Ruta: src/modulos/inventario/controladores/inventario_frontend.js
  * Descripción: Controlador blindado para la gestión de Insumos y Platos (Menú).
- *              Sincroniza dinámicamente con el backend de Django y protege el entorno global.
+ * Sincroniza dinámicamente con el backend de Django y protege el entorno global.
  */
 
 (function() {
     console.log("📦 Módulo de Inventario y Menú cargado y blindado en archivo independiente.");
 
     // --- RUTAS API (DJANGO) ---
-    const API_BASE = "http://127.0.0.1:8000/api/inventario";
-    const INV_CATEGORIES = ["Carnes", "Mariscos", "Lácteos", "Verduras", "Bebidas", "Básicos", "Panadería"];
+    // Usamos 'var' para evitar bloqueos de redeclaración al re-inyectar el script en el DOM
+    var API_BASE = "http://127.0.0.1:8000/api/inventario";
+    var INV_CATEGORIES = ["Carnes", "Mariscos", "Lácteos", "Verduras", "Bebidas", "Básicos", "Panadería"];
 
-    // --- ESTADO PRIVADO DEL MÓDULO (Protegido de colisiones globales) ---
-    const estadoInv = {
+    // --- ESTADO PROTEGIDO DEL MÓDULO ---
+    // Anclamos a 'window' para que la data sobreviva si el usuario va a otro módulo y regresa
+    window.estadoInv = window.estadoInv || {
         search: "",
         filterCat: "all",
         items: [], 
         platos: [] 
     };
 
-    let recetaTemporal = [];
+    window.recetaTemporal = window.recetaTemporal || [];
 
     // ==========================================
     // 1. INICIALIZACIÓN Y SINCRONIZACIÓN
@@ -46,7 +48,7 @@
             const data = await res.json();
             
             if (data.estado === "exitoso") {
-                estadoInv.items = data.data.map(item => ({
+                window.estadoInv.items = data.data.map(item => ({
                     id: item.id_inventario,
                     name: item.nombre,
                     category: item.categoria || "Básicos", 
@@ -58,7 +60,7 @@
             }
         } catch (error) {
             console.error("❌ Error conectando al backend (Insumos):", error);
-            estadoInv.items = []; // Fallback seguro en caso de desconexión
+            window.estadoInv.items = []; // Fallback seguro en caso de desconexión
         }
     }
 
@@ -73,7 +75,7 @@
             
             if (data.estado === "exitoso") {
                 cerrarModalInventario();
-                await initInventario(); // Recarga reactiva de los datos reales del servidor
+                await initInventario(); 
             } else {
                 alert("Error del servidor: " + data.mensaje);
             }
@@ -92,19 +94,19 @@
         
         const countText = document.getElementById("inv-count-text");
         if (countText) {
-            countText.textContent = `${estadoInv.items.length} insumos en bodega`;
+            countText.textContent = `${window.estadoInv.items.length} insumos en bodega`;
         }
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     function renderFiltrosInv() {
         const container = document.getElementById("inv-filters-container");
-        if (!container) return; // Guardrail activado por si el DOM no está listo
+        if (!container) return; 
         
-        let html = `<button onclick="window.setFiltroInv('all')" class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${estadoInv.filterCat === 'all' ? 'bg-primary/20 text-primary border-primary/40' : 'bg-card border-border text-muted hover:border-primary/30'}">Todos</button>`;
+        let html = `<button onclick="window.setFiltroInv('all')" class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${window.estadoInv.filterCat === 'all' ? 'bg-primary/20 text-primary border-primary/40' : 'bg-card border-border text-muted hover:border-primary/30'}">Todos</button>`;
         
         INV_CATEGORIES.forEach(cat => {
-            const activo = estadoInv.filterCat === cat;
+            const activo = window.estadoInv.filterCat === cat;
             html += `<button onclick="window.setFiltroInv('${cat}')" class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${activo ? 'bg-primary/20 text-primary border-primary/40' : 'bg-card border-border text-muted hover:border-primary/30'}">${cat}</button>`;
         });
         
@@ -119,7 +121,7 @@
     }
 
     function renderAlertasInv() {
-        const lowStock = estadoInv.items.filter(i => i.currentStock < i.minStock);
+        const lowStock = window.estadoInv.items.filter(i => i.currentStock < i.minStock);
         const container = document.getElementById("inv-alert-container");
         if (!container) return;
         
@@ -150,9 +152,9 @@
         const tbody = document.getElementById("inv-table-body");
         if (!tbody) return;
 
-        const filtrados = estadoInv.items.filter(i => {
-            const matchCat = estadoInv.filterCat === "all" || i.category === estadoInv.filterCat;
-            const matchSearch = i.name.toLowerCase().includes(estadoInv.search.toLowerCase());
+        const filtrados = window.estadoInv.items.filter(i => {
+            const matchCat = window.estadoInv.filterCat === "all" || i.category === window.estadoInv.filterCat;
+            const matchSearch = i.name.toLowerCase().includes(window.estadoInv.search.toLowerCase());
             return matchCat && matchSearch;
         });
 
@@ -196,12 +198,12 @@
         const tbody = document.getElementById('platos-table-body');
         if (!tbody) return;
         
-        if (estadoInv.platos.length === 0) {
+        if (window.estadoInv.platos.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-muted italic">No hay platos registrados. Crea uno nuevo.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = estadoInv.platos.map(plato => {
+        tbody.innerHTML = window.estadoInv.platos.map(plato => {
             const resumenReceta = plato.receta.map(ing => ing.nombre).join(', ');
             const recetaTexto = resumenReceta.length > 35 ? resumenReceta.substring(0, 35) + '...' : resumenReceta;
 
@@ -225,12 +227,12 @@
         const container = document.getElementById("plato-receta-lista");
         if (!container) return;
 
-        if (recetaTemporal.length === 0) {
+        if (window.recetaTemporal.length === 0) {
             container.innerHTML = `<p class="text-xs text-muted italic text-center py-2">No has agregado ingredientes.</p>`;
             return;
         }
 
-        container.innerHTML = recetaTemporal.map(ing => `
+        container.innerHTML = window.recetaTemporal.map(ing => `
             <div class="flex justify-between items-center bg-background border border-border px-3 py-2 rounded-md">
                 <span class="text-sm font-medium text-foreground">${ing.nombre}</span>
                 <div class="flex items-center gap-3">
@@ -274,14 +276,14 @@
     window.filtrarInventario = function() {
         const searchInput = document.getElementById("inv-search");
         if (searchInput) {
-            estadoInv.search = searchInput.value;
+            window.estadoInv.search = searchInput.value;
             renderTablaInv();
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     };
 
     window.setFiltroInv = function(cat) {
-        estadoInv.filterCat = cat;
+        window.estadoInv.filterCat = cat;
         renderFiltrosInv();
         renderTablaInv();
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -368,7 +370,7 @@
         if (!modal || !content) return;
 
         const selectInsumos = document.getElementById("plato-form-insumo");
-        selectInsumos.innerHTML = estadoInv.items.map(i => 
+        selectInsumos.innerHTML = window.estadoInv.items.map(i => 
             `<option value="${i.id}" data-unidad="${i.unit}" data-nombre="${i.name}">${i.name} (${i.unit})</option>`
         ).join('');
 
@@ -378,7 +380,8 @@
         document.getElementById("plato-form-name").value = "";
         document.getElementById("plato-form-price").value = "";
         document.getElementById("plato-form-category").value = "Comidas Rápidas";
-        recetaTemporal = [];
+        
+        window.recetaTemporal = [];
 
         renderRecetaTemporal();
         modal.classList.remove("hidden");
@@ -391,7 +394,7 @@
         if (!modal || !content) return;
 
         const selectInsumos = document.getElementById("plato-form-insumo");
-        selectInsumos.innerHTML = estadoInv.items.map(i => 
+        selectInsumos.innerHTML = window.estadoInv.items.map(i => 
             `<option value="${i.id}" data-unidad="${i.unit}" data-nombre="${i.name}">${i.name} (${i.unit})</option>`
         ).join('');
 
@@ -401,7 +404,8 @@
         document.getElementById("plato-form-name").value = plato.nombre;
         document.getElementById("plato-form-price").value = plato.precio;
         document.getElementById("plato-form-category").value = plato.categoria;
-        recetaTemporal = JSON.parse(JSON.stringify(plato.receta));
+        
+        window.recetaTemporal = JSON.parse(JSON.stringify(plato.receta));
 
         renderRecetaTemporal();
         modal.classList.remove("hidden");
@@ -429,11 +433,11 @@
         }
 
         const idInsumo = option.value;
-        const existente = recetaTemporal.find(r => r.idInsumo === idInsumo);
+        const existente = window.recetaTemporal.find(r => r.idInsumo === idInsumo);
         if (existente) {
             existente.cantidad += cantidad;
         } else {
-            recetaTemporal.push({
+            window.recetaTemporal.push({
                 idInsumo: idInsumo,
                 nombre: option.dataset.nombre,
                 unidad: option.dataset.unidad,
@@ -446,7 +450,7 @@
     };
 
     window.quitarInsumoReceta = function(idInsumo) {
-        recetaTemporal = recetaTemporal.filter(r => r.idInsumo !== idInsumo);
+        window.recetaTemporal = window.recetaTemporal.filter(r => r.idInsumo !== idInsumo);
         renderRecetaTemporal();
     };
 
@@ -456,18 +460,18 @@
         const precio = parseFloat(document.getElementById("plato-form-price").value) || 0;
         const categoria = document.getElementById("plato-form-category").value.trim();
 
-        if (!nombre || precio <= 0 || recetaTemporal.length === 0) {
+        if (!nombre || precio <= 0 || window.recetaTemporal.length === 0) {
             alert("El plato debe tener nombre, precio válido y al menos un ingrediente en su receta.");
             return;
         }
 
-        const nuevoPlato = { id: id || `p-${Date.now()}`, nombre, precio, categoria, receta: [...recetaTemporal] };
+        const nuevoPlato = { id: id || `p-${Date.now()}`, nombre, precio, categoria, receta: [...window.recetaTemporal] };
 
         if (id) {
-            const index = estadoInv.platos.findIndex(p => p.id === id);
-            if (index !== -1) estadoInv.platos[index] = nuevoPlato;
+            const index = window.estadoInv.platos.findIndex(p => p.id === id);
+            if (index !== -1) window.estadoInv.platos[index] = nuevoPlato;
         } else {
-            estadoInv.platos.push(nuevoPlato);
+            window.estadoInv.platos.push(nuevoPlato);
         }
 
         window.cerrarModalPlato();
@@ -495,7 +499,11 @@
         }
     }
 
+    // 🔥 Limpieza del vigilante anterior para evitar bucles infinitos de memoria
+    if (window.vigilanteInvInterval) {
+        clearInterval(window.vigilanteInvInterval);
+    }
     // Ciclo repetitivo de baja carga (cada 300ms) para control asíncrono
-    const vigilanteInvInterval = setInterval(vigilarPestañaInventario, 300);
+    window.vigilanteInvInterval = setInterval(vigilarPestañaInventario, 300);
 
 })();

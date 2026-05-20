@@ -1,27 +1,26 @@
-// Configuración de los estados (Igual al React)
-const STATUS_FLOW = ["pendiente", "preparando", "listo", "entregado"];
-const STATUS_CONFIG = {
+// Validación para persistencia de estado entre cambios de módulo
+var STATUS_FLOW = ["pendiente", "preparando", "listo", "entregado"];
+
+var STATUS_CONFIG = {
     pendiente: { label: "Pendiente", bg: "bg-yellow-500/5", border: "border-yellow-500/30", text: "text-yellow-400", headerBg: "bg-yellow-500/10", icon: "circle-dot" },
     preparando: { label: "Preparando", bg: "bg-blue-500/5", border: "border-blue-500/30", text: "text-blue-400", headerBg: "bg-blue-500/10", icon: "loader-2", spin: true },
     listo: { label: "Listo", bg: "bg-green-500/5", border: "border-green-500/30", text: "text-green-400", headerBg: "bg-green-500/10", icon: "check-circle-2" },
     entregado: { label: "Entregado", bg: "bg-muted/20", border: "border-border", text: "text-muted", headerBg: "bg-muted/30", icon: "check-check" }
 };
 
-// Estado Global del Módulo
-let estadoCocina = {
-    view: "all", // 'all', 'cocina', 'bar'
+var estadoCocina = window.estadoCocina || {
+    view: "all",
     timer: null,
-    // Datos de prueba (Aquí luego conectarás tu backend/Firebase)
     orders: [
         {
-            id: "ord-1", tableNumber: "04", waiter: "Admin", status: "pendiente", createdAt: new Date(Date.now() - 5 * 60000), // Hace 5 mins
+            id: "ord-1", tableNumber: "04", waiter: "Admin", status: "pendiente", createdAt: new Date(Date.now() - 5 * 60000),
             items: [
                 { id: 1, name: "Hamb. Premium", quantity: 2, category: "cocina", notes: "Sin cebolla" },
                 { id: 2, name: "Coca Cola", quantity: 2, category: "bar", notes: "" }
             ]
         },
         {
-            id: "ord-2", tableNumber: "12", waiter: "Admin", status: "preparando", createdAt: new Date(Date.now() - 25 * 60000), // Hace 25 mins (Urgente)
+            id: "ord-2", tableNumber: "12", waiter: "Admin", status: "preparando", createdAt: new Date(Date.now() - 25 * 60000),
             items: [
                 { id: 3, name: "Tacos Al Pastor", quantity: 1, category: "cocina", notes: "Extra picante" }
             ]
@@ -35,20 +34,31 @@ let estadoCocina = {
     ]
 };
 
+// Guardamos en window
+window.estadoCocina = estadoCocina;
+
 // 1. Inicialización
-function initCocina() {
-    renderStats();
-    renderFiltros();
-    renderKanban();
-
-    // Actualizar los tiempos cada minuto
+window.initCocina = function() {
+    // Limpiamos intervalos previos si existen
     if (estadoCocina.timer) clearInterval(estadoCocina.timer);
-    estadoCocina.timer = setInterval(() => renderKanban(), 60000);
-}
+    
+    setTimeout(() => {
+        const stats = document.getElementById('stats-container');
+        if (stats) {
+            renderStats();
+            renderFiltros();
+            renderKanban();
+            
+            estadoCocina.timer = setInterval(() => renderKanban(), 60000);
+        }
+    }, 50);
+};
 
-// 2. Renderizar Estadísticas Superiores
+// 2. Renderizar Estadísticas
 function renderStats() {
     const container = document.getElementById('stats-container');
+    if (!container) return;
+    
     const pendingCount = estadoCocina.orders.filter(o => o.status === "pendiente").length;
     const preparingCount = estadoCocina.orders.filter(o => o.status === "preparando").length;
 
@@ -60,11 +70,13 @@ function renderStats() {
         html += `<div class="flex items-center gap-1.5 text-blue-400 text-sm font-medium"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>${preparingCount} en preparación</span></div>`;
     }
     container.innerHTML = html;
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// 3. Renderizar Filtros (Todas, Cocina, Bar)
+// 3. Renderizar Filtros
 function renderFiltros() {
     const container = document.getElementById('filtros-container');
+    if (!container) return;
     const v = estadoCocina.view;
 
     container.innerHTML = `
@@ -85,11 +97,11 @@ window.setFiltroCocina = function(vista) {
     renderKanban();
 };
 
-// 4. Renderizar el Tablero Kanban
+// 4. Renderizar Kanban
 function renderKanban() {
     const container = document.getElementById('kanban-container');
+    if (!container) return;
     
-    // Filtrar comandas según la vista seleccionada
     const visibleOrders = estadoCocina.orders.filter(o => {
         if (estadoCocina.view === "cocina") return o.items.some(i => i.category === "cocina");
         if (estadoCocina.view === "bar") return o.items.some(i => i.category === "bar");
@@ -97,7 +109,6 @@ function renderKanban() {
     });
 
     let kanbanHtml = '';
-
     STATUS_FLOW.forEach(status => {
         const config = STATUS_CONFIG[status];
         const colOrders = visibleOrders.filter(o => o.status === status);
@@ -111,12 +122,8 @@ function renderKanban() {
                     </div>
                     <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-background/50 ${config.text}">${colOrders.length}</span>
                 </div>
-
                 <div class="flex flex-col gap-3">
-                    ${colOrders.length === 0 
-                        ? `<div class="rounded-xl border border-dashed border-border p-6 text-center text-muted text-sm">Sin pedidos</div>`
-                        : colOrders.map(order => generarTarjetaHtml(order, config, status)).join('')
-                    }
+                    ${colOrders.length === 0 ? `<div class="rounded-xl border border-dashed border-border p-6 text-center text-muted text-sm">Sin pedidos</div>` : colOrders.map(o => generarTarjetaHtml(o, config, status)).join('')}
                 </div>
             </div>
         `;
@@ -126,81 +133,47 @@ function renderKanban() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// 5. Generar HTML de cada Tarjeta
+// 5. Generar Tarjeta
 function generarTarjetaHtml(order, config, status) {
     const currentIdx = STATUS_FLOW.indexOf(status);
     const mins = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000);
-    const isUrgent = mins > 20 && status !== "entregado";
-    const timeColor = isUrgent ? "text-destructive" : "text-muted";
+    const timeColor = mins > 20 && status !== "entregado" ? "text-destructive" : "text-muted";
 
-    // Generar la lista de items (Opaca los que no corresponden al filtro activo)
     const itemsHtml = order.items.map(item => {
         const dotColor = item.category === "cocina" ? "bg-primary" : "bg-blue-400";
         const isMuted = (estadoCocina.view === "cocina" && item.category !== "cocina") || 
                         (estadoCocina.view === "bar" && item.category !== "bar");
-        const opacity = isMuted ? "opacity-30 line-through" : "opacity-100";
-
-        return `
-            <div class="flex items-center gap-2 ${opacity}">
-                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}"></span>
-                <span class="text-foreground text-sm">
-                    <span class="font-semibold">${item.quantity}x</span> ${item.name}
-                </span>
-                ${item.notes ? `<span class="text-xs text-muted italic ml-auto">(${item.notes})</span>` : ''}
-            </div>
-        `;
+        return `<div class="flex items-center gap-2 ${isMuted ? "opacity-30 line-through" : ""}">
+            <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
+            <span class="text-foreground text-sm"><span class="font-semibold">${item.quantity}x</span> ${item.name}</span>
+            ${item.notes ? `<span class="text-xs text-muted italic ml-auto">(${item.notes})</span>` : ''}
+        </div>`;
     }).join('');
 
-    // Botones de acción
     let botonesHtml = `<div class="flex items-center gap-2 pt-2 border-t border-border/50">`;
-    
-    if (currentIdx > 0) {
-        botonesHtml += `<button onclick="moverPedido('${order.id}', -1)" class="flex-1 py-1.5 rounded-lg bg-secondary hover:bg-border text-muted text-xs font-medium transition-colors">← Atrás</button>`;
-    }
-    
+    if (currentIdx > 0) botonesHtml += `<button onclick="moverPedido('${order.id}', -1)" class="flex-1 py-1.5 rounded-lg bg-secondary hover:bg-border text-muted text-xs font-medium">← Atrás</button>`;
     if (currentIdx < STATUS_FLOW.length - 1) {
-        const isReadyBtn = status === "listo";
-        const btnClass = isReadyBtn 
-            ? "bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30" 
-            : "bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30";
-        const btnText = isReadyBtn ? "Entregar →" : "Avanzar →";
-        botonesHtml += `<button onclick="moverPedido('${order.id}', 1)" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${btnClass}">${btnText}</button>`;
+        botonesHtml += `<button onclick="moverPedido('${order.id}', 1)" class="flex-1 py-1.5 rounded-lg text-xs font-semibold ${status === "listo" ? "bg-green-500/20 text-green-400" : "bg-primary/20 text-primary"}">Avanzar →</button>`;
     }
     botonesHtml += `</div>`;
 
-    return `
-        <div class="rounded-xl border p-4 transition-all hover:shadow-lg ${config.bg} ${config.border}">
-            <div class="flex items-start justify-between mb-3">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-foreground font-bold text-base">Mesa #${order.tableNumber}</span>
-                        <span class="w-2 h-2 rounded-full ${config.text.replace('text-', 'bg-')}"></span>
-                    </div>
-                    <p class="text-muted text-xs mt-0.5">${order.waiter}</p>
-                </div>
-                <div class="flex items-center gap-1 text-xs font-medium ${timeColor}">
-                    <i data-lucide="clock" class="w-3 h-3"></i>
-                    <span>${mins}m</span>
-                </div>
+    return `<div class="rounded-xl border p-4 transition-all hover:shadow-lg ${config.bg} ${config.border}">
+        <div class="flex justify-between mb-3">
+            <div>
+                <div class="flex items-center gap-2"><span class="font-bold">Mesa #${order.tableNumber}</span><span class="w-2 h-2 rounded-full ${config.text.replace('text-', 'bg-')}"></span></div>
+                <p class="text-muted text-xs">${order.waiter}</p>
             </div>
-            
-            <div class="flex flex-col gap-1.5 mb-3">
-                ${itemsHtml}
-            </div>
-            
-            ${botonesHtml}
+            <div class="flex items-center gap-1 text-xs ${timeColor}"><i data-lucide="clock" class="w-3 h-3"></i> <span>${mins}m</span></div>
         </div>
-    `;
+        <div class="flex flex-col gap-1.5 mb-3">${itemsHtml}</div>
+        ${botonesHtml}
+    </div>`;
 }
 
-// 6. Lógica para mover tarjetas
 window.moverPedido = function(orderId, direccion) {
     const order = estadoCocina.orders.find(o => o.id === orderId);
     if (!order) return;
-
-    const currentIdx = STATUS_FLOW.indexOf(order.status);
-    const newIdx = currentIdx + direccion;
-
+    const newIdx = STATUS_FLOW.indexOf(order.status) + direccion;
     if (newIdx >= 0 && newIdx < STATUS_FLOW.length) {
         order.status = STATUS_FLOW[newIdx];
         renderStats();
@@ -208,5 +181,5 @@ window.moverPedido = function(orderId, direccion) {
     }
 };
 
-// Arrancamos el módulo
-initCocina();       
+// Arrancamos
+initCocina();

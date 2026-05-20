@@ -1,10 +1,10 @@
 // ==========================================
-// ESTADO Y DATOS SIMULADOS (Próximamente BD)
+// ESTADO Y PERSISTENCIA (Uso de var para evitar errores en SPA)
 // ==========================================
-const ROLES = ["Administrador", "Gerente", "Cajero", "Mesero", "Inventariador"];
-const MODULES = ["Dashboard", "Usuarios", "Mesas", "Pedidos", "Cocina", "Inventario", "Reportes"];
+var ROLES = ["Administrador", "Gerente", "Cajero", "Mesero", "Inventariador"];
+var MODULES = ["Dashboard", "Usuarios", "Mesas", "Pedidos", "Cocina", "Inventario", "Reportes"];
 
-const ROLE_PERMISSIONS = {
+var ROLE_PERMISSIONS = {
     Administrador: ["Dashboard", "Usuarios", "Mesas", "Pedidos", "Cocina", "Inventario", "Reportes"],
     Gerente: ["Dashboard", "Mesas", "Pedidos", "Cocina", "Inventario", "Reportes"],
     Cajero: ["Mesas", "Pedidos", "Reportes"],
@@ -12,7 +12,7 @@ const ROLE_PERMISSIONS = {
     Inventariador: ["Inventario"],
 };
 
-const ROLE_COLORS = {
+var ROLE_COLORS = {
     Administrador: "bg-primary/20 text-primary border-primary/30",
     Gerente: "bg-blue-500/20 text-blue-400 border-blue-500/30",
     Cajero: "bg-green-500/20 text-green-400 border-green-500/30",
@@ -20,34 +20,36 @@ const ROLE_COLORS = {
     Inventariador: "bg-orange-500/20 text-orange-400 border-orange-500/30",
 };
 
-// Base de datos simulada
-let dbUsuarios = [
+// Base de datos persistente en window
+window.dbUsuarios = window.dbUsuarios || [
     { id: "u1", nombre: "Carlos Admin", correo: "carlos@restfly.com", rol: "Administrador", activo: true },
     { id: "u2", nombre: "María Pérez", correo: "maria@restfly.com", rol: "Mesero", activo: true },
     { id: "u3", nombre: "Juan Cajero", correo: "juan@restfly.com", rol: "Cajero", activo: false }
 ];
 
-// Estado del formulario actual
-let rolSeleccionado = "Mesero";
-let estadoActivo = true;
-let idConfirmarEliminar = null;
+// Estado global para formularios
+var rolSeleccionado = "Mesero";
+var estadoActivo = true;
+var idConfirmarEliminar = null;
 
 // ==========================================
 // FUNCIONES DE RENDERIZADO
 // ==========================================
 
-function renderizarUsuarios(filtro = "") {
+window.renderizarUsuarios = function(filtro = "") {
     const tbody = document.getElementById("tabla-usuarios-body");
     const contador = document.getElementById("contador-usuarios");
+    if (!tbody) return;
+    
     tbody.innerHTML = "";
 
-    const filtrados = dbUsuarios.filter(u => 
-        u.nombre.toLowerCase().includes(filtro) || 
-        u.correo.toLowerCase().includes(filtro) ||
-        u.rol.toLowerCase().includes(filtro)
+    const filtrados = window.dbUsuarios.filter(u => 
+        u.nombre.toLowerCase().includes(filtro.toLowerCase()) || 
+        u.correo.toLowerCase().includes(filtro.toLowerCase()) ||
+        u.rol.toLowerCase().includes(filtro.toLowerCase())
     );
 
-    contador.textContent = `${filtrados.length} usuarios registrados`;
+    if (contador) contador.textContent = `${filtrados.length} usuarios registrados`;
 
     if (filtrados.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-muted">No se encontraron usuarios.</td></tr>`;
@@ -60,22 +62,18 @@ function renderizarUsuarios(filtro = "") {
             ? `<span class="inline-flex items-center gap-1 text-xs font-medium text-green-500"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Activo</span>`
             : `<span class="inline-flex items-center gap-1 text-xs font-medium text-muted"><span class="w-1.5 h-1.5 rounded-full bg-muted"></span>Inactivo</span>`;
 
-        let accionesHTML = '';
-        if (idConfirmarEliminar === user.id) {
-            accionesHTML = `
-                <div class="flex gap-1 justify-end">
-                    <button onclick="eliminarUsuarioDefinitivo('${user.id}')" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-destructive/20 text-destructive transition-colors"><i data-lucide="check" class="w-4 h-4"></i></button>
-                    <button onclick="cancelarEliminar()" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-secondary text-muted hover:text-foreground transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
-                </div>
-            `;
-        } else {
-            accionesHTML = `
-                <div class="flex gap-1 justify-end">
-                    <button onclick="abrirModalUsuario('${user.id}')" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-secondary text-muted hover:text-foreground transition-colors"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                    <button onclick="confirmarEliminar('${user.id}')" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-destructive/20 text-muted hover:text-destructive transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                </div>
-            `;
-        }
+        const esEliminando = idConfirmarEliminar === user.id;
+        const accionesHTML = esEliminando ? `
+            <div class="flex gap-1 justify-end">
+                <button onclick="eliminarUsuarioDefinitivo('${user.id}')" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-destructive/20 text-destructive"><i data-lucide="check" class="w-4 h-4"></i></button>
+                <button onclick="cancelarEliminar()" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-secondary text-muted"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+        ` : `
+            <div class="flex gap-1 justify-end">
+                <button onclick="abrirModalUsuario('${user.id}')" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-secondary text-muted"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                <button onclick="confirmarEliminar('${user.id}')" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-destructive/20 text-muted hover:text-destructive"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+        `;
 
         const tr = document.createElement("tr");
         tr.className = "hover:bg-secondary/30 transition-colors";
@@ -88,172 +86,120 @@ function renderizarUsuarios(filtro = "") {
         `;
         tbody.appendChild(tr);
     });
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+};
 
-    lucide.createIcons(); // Recargar iconos de Lucide
-}
-
-function renderizarMatrizPermisos() {
+window.renderizarMatrizPermisos = function() {
     const thead = document.getElementById("matriz-head");
     const tbody = document.getElementById("matriz-body");
+    if (!thead || !tbody) return;
 
-    // Cabecera
     let trHead = `<tr class="border-b border-border"><th class="text-left py-2 pr-4 text-muted font-medium">Módulo</th>`;
     ROLES.forEach(r => trHead += `<th class="text-center py-2 px-3 text-muted font-medium text-xs">${r}</th>`);
     trHead += `</tr>`;
     thead.innerHTML = trHead;
 
-    // Filas
     let filas = '';
     MODULES.forEach(mod => {
-        let fila = `<tr class="border-b border-border/50 hover:bg-secondary/30 transition-colors"><td class="py-2.5 pr-4 text-foreground font-medium">${mod}</td>`;
+        let fila = `<tr class="border-b border-border/50 hover:bg-secondary/30"><td class="py-2.5 pr-4 text-foreground font-medium">${mod}</td>`;
         ROLES.forEach(rol => {
             const tienePermiso = ROLE_PERMISSIONS[rol].includes(mod);
-            if (tienePermiso) {
-                fila += `<td class="text-center py-2.5 px-3"><span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/20 text-primary"><i data-lucide="check" class="w-3 h-3"></i></span></td>`;
-            } else {
-                fila += `<td class="text-center py-2.5 px-3"><span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-border/40 text-muted"><i data-lucide="x" class="w-3 h-3"></i></span></td>`;
-            }
+            fila += `<td class="text-center py-2.5 px-3"><span class="inline-flex items-center justify-center w-5 h-5 rounded-full ${tienePermiso ? 'bg-primary/20 text-primary' : 'bg-border/40 text-muted'}"><i data-lucide="${tienePermiso ? 'check' : 'x'}" class="w-3 h-3"></i></span></td>`;
         });
-        fila += `</tr>`;
-        filas += fila;
+        filas += fila + `</tr>`;
     });
     tbody.innerHTML = filas;
-    lucide.createIcons();
-}
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+};
 
 // ==========================================
-// FUNCIONES DEL MODAL Y FORMULARIO
+// MODAL & LÓGICA
 // ==========================================
 
-function abrirModalUsuario(id = null) {
+window.abrirModalUsuario = function(id = null) {
     const modal = document.getElementById("modal-usuario");
-    const titulo = document.getElementById("modal-titulo");
+    const form = document.getElementById("form-usuario");
+    if (!modal) return;
     
-    // Resetear formulario
-    document.getElementById("form-usuario").reset();
-    document.getElementById("usuario-id").value = "";
+    form.reset();
+    document.getElementById("usuario-id").value = id || "";
     
     if (id) {
-        // Modo Editar
-        const user = dbUsuarios.find(u => u.id === id);
-        titulo.textContent = "Editar Usuario";
-        document.getElementById("usuario-id").value = user.id;
+        const user = window.dbUsuarios.find(u => u.id === id);
+        document.getElementById("modal-titulo").textContent = "Editar Usuario";
         document.getElementById("usuario-nombre").value = user.nombre;
         document.getElementById("usuario-correo").value = user.correo;
         rolSeleccionado = user.rol;
         estadoActivo = user.activo;
     } else {
-        // Modo Crear
-        titulo.textContent = "Nuevo Usuario";
+        document.getElementById("modal-titulo").textContent = "Nuevo Usuario";
         rolSeleccionado = "Mesero";
         estadoActivo = true;
     }
-
     renderizarBotonesRoles();
     actualizarToggleUI();
-    
     modal.classList.remove("hidden");
-}
+};
 
-function cerrarModalUsuario() {
-    document.getElementById("modal-usuario").classList.add("hidden");
-}
+window.cerrarModalUsuario = () => document.getElementById("modal-usuario").classList.add("hidden");
 
-function renderizarBotonesRoles() {
+window.renderizarBotonesRoles = function() {
     const contenedor = document.getElementById("contenedor-roles");
+    if (!contenedor) return;
     contenedor.innerHTML = "";
-    
     ROLES.forEach(r => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.textContent = r;
-        btn.className = `px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
-            rolSeleccionado === r 
-            ? "bg-primary/20 text-primary border-primary/50" 
-            : "bg-secondary text-muted border-border hover:border-primary/30"
-        }`;
-        btn.onclick = () => {
-            rolSeleccionado = r;
-            renderizarBotonesRoles(); // Re-renderizar para actualizar clases
-        };
+        btn.className = `px-3 py-2 rounded-lg text-sm font-medium border transition-all ${rolSeleccionado === r ? "bg-primary/20 text-primary border-primary/50" : "bg-secondary text-muted border-border hover:border-primary/30"}`;
+        btn.onclick = () => { rolSeleccionado = r; renderizarBotonesRoles(); };
         contenedor.appendChild(btn);
     });
-}
+};
 
-function alternarEstadoUsuario() {
-    estadoActivo = !estadoActivo;
-    actualizarToggleUI();
-}
-
-function actualizarToggleUI() {
+window.actualizarToggleUI = function() {
     const toggleBg = document.getElementById("toggle-estado");
     const toggleBola = document.getElementById("toggle-bola");
     const texto = document.getElementById("texto-estado");
+    if (!toggleBg) return;
 
     if (estadoActivo) {
-        toggleBg.classList.replace("bg-border", "bg-primary");
-        toggleBola.classList.add("translate-x-5");
-        toggleBola.classList.remove("translate-x-0");
+        toggleBg.classList.remove("bg-border"); toggleBg.classList.add("bg-primary");
+        toggleBola.classList.add("translate-x-5"); toggleBola.classList.remove("translate-x-0");
         texto.textContent = "Usuario activo";
     } else {
-        toggleBg.classList.replace("bg-primary", "bg-border");
-        toggleBola.classList.remove("translate-x-5");
-        toggleBola.classList.add("translate-x-0");
+        toggleBg.classList.remove("bg-primary"); toggleBg.classList.add("bg-border");
+        toggleBola.classList.remove("translate-x-5"); toggleBola.classList.add("translate-x-0");
         texto.textContent = "Usuario inactivo";
     }
-}
+};
 
-function guardarUsuario() {
+window.alternarEstadoUsuario = () => { estadoActivo = !estadoActivo; actualizarToggleUI(); };
+
+window.guardarUsuario = function() {
     const id = document.getElementById("usuario-id").value;
     const nombre = document.getElementById("usuario-nombre").value.trim();
     const correo = document.getElementById("usuario-correo").value.trim();
-
     if (!nombre || !correo) return alert("Completa los campos obligatorios");
 
     if (id) {
-        // Editar
-        const index = dbUsuarios.findIndex(u => u.id === id);
-        dbUsuarios[index] = { id, nombre, correo, rol: rolSeleccionado, activo: estadoActivo };
+        const index = window.dbUsuarios.findIndex(u => u.id === id);
+        window.dbUsuarios[index] = { id, nombre, correo, rol: rolSeleccionado, activo: estadoActivo };
     } else {
-        // Crear
-        const nuevoId = "u" + Date.now();
-        dbUsuarios.push({ id: nuevoId, nombre, correo, rol: rolSeleccionado, activo: estadoActivo });
+        window.dbUsuarios.push({ id: "u" + Date.now(), nombre, correo, rol: rolSeleccionado, activo: estadoActivo });
     }
-
     cerrarModalUsuario();
-    renderizarUsuarios(document.getElementById("buscador-usuarios").value.toLowerCase());
-}
+    renderizarUsuarios(document.getElementById("buscador-usuarios")?.value || "");
+};
 
-// ==========================================
-// FUNCIONES DE ELIMINACIÓN
-// ==========================================
+// Acciones de eliminación
+window.confirmarEliminar = (id) => { idConfirmarEliminar = id; renderizarUsuarios(document.getElementById("buscador-usuarios")?.value || ""); };
+window.cancelarEliminar = () => { idConfirmarEliminar = null; renderizarUsuarios(document.getElementById("buscador-usuarios")?.value || ""); };
+window.eliminarUsuarioDefinitivo = (id) => { window.dbUsuarios = window.dbUsuarios.filter(u => u.id !== id); idConfirmarEliminar = null; renderizarUsuarios(document.getElementById("buscador-usuarios")?.value || ""); };
 
-function confirmarEliminar(id) {
-    idConfirmarEliminar = id;
-    renderizarUsuarios(document.getElementById("buscador-usuarios").value.toLowerCase());
-}
-
-function cancelarEliminar() {
-    idConfirmarEliminar = null;
-    renderizarUsuarios(document.getElementById("buscador-usuarios").value.toLowerCase());
-}
-
-function eliminarUsuarioDefinitivo(id) {
-    dbUsuarios = dbUsuarios.filter(u => u.id !== id);
-    idConfirmarEliminar = null;
-    renderizarUsuarios(document.getElementById("buscador-usuarios").value.toLowerCase());
-}
-
-// ==========================================
-// EVENTOS E INICIALIZACIÓN
-// ==========================================
-
-// Evento de búsqueda en vivo
-document.getElementById("buscador-usuarios").addEventListener("input", (e) => {
-    renderizarUsuarios(e.target.value.toLowerCase());
-});
-
-// Inicializar al cargar el script
+// Inicialización
+const buscador = document.getElementById("buscador-usuarios");
+if (buscador) buscador.addEventListener("input", (e) => renderizarUsuarios(e.target.value));
 renderizarUsuarios();
 renderizarMatrizPermisos();
-lucide.createIcons(); // Instanciar iconos iniciales
+if (typeof lucide !== 'undefined') lucide.createIcons();
