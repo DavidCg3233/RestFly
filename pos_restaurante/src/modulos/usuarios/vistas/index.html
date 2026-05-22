@@ -1,16 +1,16 @@
-<div class="flex flex-col gap-6 w-full pb-10">
+<div class="flex flex-col gap-6 w-full pb-10" id="contenedor-modulo-usuarios">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h2 class="text-2xl font-bold text-foreground">Gestión de Usuarios</h2>
-            <p id="contador-usuarios" class="text-muted text-sm mt-1">0 usuarios registrados</p>
+            <p id="contador-usuarios" class="text-muted text-sm mt-1">Cargando registros...</p>
         </div>
-        <button onclick="abrirModalUsuario()" class="h-10 px-4 bg-primary text-primary-foreground font-medium rounded-lg hover:brightness-110 active:scale-[0.97] transition-all flex items-center gap-2">
+        <button onclick="AppUsuarios.abrirModal()" class="h-10 px-4 bg-primary text-primary-foreground font-medium rounded-lg hover:brightness-110 active:scale-[0.97] transition-all flex items-center gap-2">
             <i data-lucide="plus" class="w-4 h-4"></i>
             Nuevo Usuario
         </button>
     </div>
 
-    <input type="text" id="buscador-usuarios" placeholder="Buscar por nombre, correo o rol..." 
+    <input type="text" id="buscador-usuarios" placeholder="Buscar por nombre, usuario o rol..."
         class="w-full max-w-md bg-card border border-border text-foreground h-10 px-4 rounded-lg focus:outline-none focus:border-primary transition-all placeholder:text-muted/50">
 
     <div class="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
@@ -19,14 +19,14 @@
                 <thead class="bg-secondary/30 text-muted border-b border-border">
                     <tr>
                         <th class="px-4 py-3 font-medium">Nombre</th>
-                        <th class="px-4 py-3 font-medium">Correo</th>
+                        <th class="px-4 py-3 font-medium">Usuario</th>
+                        <th class="px-4 py-3 font-medium">Teléfono</th>
                         <th class="px-4 py-3 font-medium">Rol</th>
                         <th class="px-4 py-3 font-medium">Estado</th>
                         <th class="px-4 py-3 font-medium text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody id="tabla-usuarios-body" class="divide-y divide-border">
-                    </tbody>
+                <tbody id="tabla-usuarios-body" class="divide-y divide-border"></tbody>
             </table>
         </div>
     </div>
@@ -38,43 +38,55 @@
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead id="matriz-head">
-                    </thead>
-                <tbody id="matriz-body">
-                    </tbody>
+                <thead id="matriz-head"></thead>
+                <tbody id="matriz-body"></tbody>
             </table>
         </div>
     </div>
 </div>
 
-<div id="modal-usuario" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="cerrarModalUsuario()"></div>
-    
-    <div class="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md relative z-10 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+<div id="modal-usuario" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 transition-all duration-200">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="AppUsuarios.cerrarModal()"></div>
+
+    <div id="modal-usuario-contenido" class="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md relative z-10 flex flex-col overflow-hidden transform scale-95 transition-all duration-200">
         <div class="px-6 py-4 border-b border-border">
             <h3 id="modal-titulo" class="text-lg font-bold text-foreground">Nuevo Usuario</h3>
         </div>
-        
-        <form id="form-usuario" class="p-6 flex flex-col gap-4">
+
+        <form id="form-usuario" class="p-6 flex flex-col gap-4" onsubmit="event.preventDefault();">
             <input type="hidden" id="usuario-id">
-            
+
             <div class="flex flex-col gap-1.5">
-                <label class="text-muted text-sm">Nombre completo</label>
-                <input type="text" id="usuario-nombre" required class="w-full bg-secondary border border-border text-foreground h-10 px-3 rounded-lg focus:outline-none focus:border-primary transition-all">
-            </div>
-            
-            <div class="flex flex-col gap-1.5">
-                <label class="text-muted text-sm">Correo electrónico</label>
-                <input type="email" id="usuario-correo" required class="w-full bg-secondary border border-border text-foreground h-10 px-3 rounded-lg focus:outline-none focus:border-primary transition-all">
+                <label class="text-muted text-sm">Nombre completo <span class="text-destructive">*</span></label>
+                <input type="text" id="usuario-nombre" placeholder="Ej: Juan Pérez" required
+                    class="w-full bg-secondary border border-border text-foreground h-10 px-3 rounded-lg focus:outline-none focus:border-primary transition-all">
+                <span class="text-xs text-muted">Escribe nombre y apellido separados por espacio</span>
             </div>
 
             <div class="flex flex-col gap-1.5">
-                <label class="text-muted text-sm">Rol</label>
-                <div id="contenedor-roles" class="grid grid-cols-2 gap-2">
-                    </div>
+                <label class="text-muted text-sm">Nombre de usuario (login) <span class="text-destructive">*</span></label>
+                <input type="text" id="usuario-username" required
+                    class="w-full bg-secondary border border-border text-foreground h-10 px-3 rounded-lg focus:outline-none focus:border-primary transition-all">
             </div>
 
-            <div class="flex items-center gap-3 mt-2 cursor-pointer w-max" onclick="alternarEstadoUsuario()">
+            <div class="flex flex-col gap-1.5">
+                <label class="text-muted text-sm">Teléfono</label>
+                <input type="text" id="usuario-telefono" placeholder="Opcional"
+                    class="w-full bg-secondary border border-border text-foreground h-10 px-3 rounded-lg focus:outline-none focus:border-primary transition-all">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-muted text-sm">Contraseña</label>
+                <input type="password" id="usuario-password" placeholder="Dejar en blanco para no cambiarla"
+                    class="w-full bg-secondary border border-border text-foreground h-10 px-3 rounded-lg focus:outline-none focus:border-primary transition-all">
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label class="text-muted text-sm">Rol operativo</label>
+                <div id="contenedor-roles" class="grid grid-cols-2 gap-2"></div>
+            </div>
+
+            <div class="flex items-center gap-3 mt-2 cursor-pointer w-max" onclick="AppUsuarios.alternarEstado()">
                 <div id="toggle-estado" class="relative w-10 h-5 rounded-full bg-primary transition-colors">
                     <span id="toggle-bola" class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform translate-x-5"></span>
                 </div>
@@ -83,10 +95,336 @@
         </form>
 
         <div class="px-6 py-4 border-t border-border bg-secondary/20 flex justify-end gap-3">
-            <button onclick="cerrarModalUsuario()" class="px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-secondary hover:text-foreground transition-colors border border-border">Cancelar</button>
-            <button onclick="guardarUsuario()" class="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:brightness-110 transition-colors">Guardar cambios</button>
+            <button onclick="AppUsuarios.cerrarModal()" class="px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-secondary hover:text-foreground transition-colors border border-border">Cancelar</button>
+            <button id="btn-guardar-usuario" onclick="AppUsuarios.guardarUsuario()" class="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:brightness-110 transition-colors">Crear Usuario</button>
         </div>
     </div>
 </div>
 
-<script src="../../modulos/usuarios/controladores/usuarios_frontend.js"></script>
+<!-- TRUCO SPA: Este elemento oculto fuerza la ejecución de init() cada vez que se inyecta el HTML del módulo -->
+<img src="x" onerror="setTimeout(() => { if(window.AppUsuarios) window.AppUsuarios.init(); }, 100)" style="display: none;">
+
+<script>
+    // Validamos que no exista previamente para no perder los datos en memoria al cambiar de módulo
+    if (!window.AppUsuarios) {
+        window.AppUsuarios = {
+            API_URL: "http://localhost:8000/api/usuarios/",
+            listaUsuarios: [],
+            listaRoles: [],
+            busquedaFiltro: "",
+            rolSeleccionado: "Mesero",
+            estadoActivo: true,
+            idConfirmarEliminar: null,
+
+            modulos: ["Dashboard", "Usuarios", "Mesas", "Pedidos", "Cocina", "Inventario", "Reportes"],
+
+            permisosMapa: {
+                Administrador: ["Dashboard", "Usuarios", "Mesas", "Pedidos", "Cocina", "Inventario", "Reportes"],
+                Gerente:       ["Dashboard", "Mesas", "Pedidos", "Cocina", "Inventario", "Reportes"],
+                Cajero:        ["Mesas", "Pedidos", "Reportes"],
+                Mesero:        ["Mesas", "Pedidos"],
+                Inventariador: ["Inventario"],
+                Operario:      ["Cocina"],
+            },
+
+            roleColors: {
+                Administrador: "bg-primary/20 text-primary border-primary/30",
+                Gerente:       "bg-blue-500/20 text-blue-400 border-blue-500/30",
+                Cajero:        "bg-green-500/20 text-green-400 border-green-500/30",
+                Mesero:        "bg-purple-500/20 text-purple-400 border-purple-500/30",
+                Inventariador: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+                Operario:      "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+            },
+
+            init: async function() {
+                console.log("👥 Inicializando módulo Usuarios...");
+                await this.sincronizarBackend();
+                this.renderizarMatriz();
+                this.inicializarBuscador();
+            },
+
+            sincronizarBackend: async function() {
+                try {
+                    const response = await fetch(this.API_URL);
+                    const data = await response.json();
+                    if (data.estado === "exitoso") {
+                        this.listaUsuarios = data.data;
+                        this.listaRoles    = data.roles.map(r => r.nombre_rol);
+                        if (this.listaRoles.length > 0) this.rolSeleccionado = this.listaRoles[0];
+                        this.renderizarTabla(this.busquedaFiltro);
+                    } else {
+                        console.error("Error desde el backend:", data.mensaje);
+                    }
+                } catch (error) {
+                    console.error("Error sincronizando base de datos:", error);
+                }
+            },
+
+            renderizarTabla: function(filtro = "") {
+                const tbody   = document.getElementById("tabla-usuarios-body");
+                const contador = document.getElementById("contador-usuarios");
+                if (!tbody) return;
+
+                tbody.innerHTML = "";
+
+                const filtrados = this.listaUsuarios.filter(u =>
+                    u.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
+                    u.username.toLowerCase().includes(filtro.toLowerCase()) ||
+                    u.rol.toLowerCase().includes(filtro.toLowerCase())
+                );
+
+                if (contador) contador.textContent = `${filtrados.length} usuarios registrados`;
+
+                if (filtrados.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-muted italic">No se encontraron usuarios coincidentes.</td></tr>`;
+                    return;
+                }
+
+                filtrados.forEach(user => {
+                    const colorClase  = this.roleColors[user.rol] || "bg-secondary text-foreground border-border";
+                    const badgeEstado = user.activo
+                        ? `<span class="inline-flex items-center gap-1 text-xs text-green-500 font-medium"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Activo</span>`
+                        : `<span class="inline-flex items-center gap-1 text-xs text-muted font-medium"><span class="w-1.5 h-1.5 rounded-full bg-muted"></span>Inactivo</span>`;
+
+                    const esConfirmando = this.idConfirmarEliminar === user.id;
+                    const accionesHTML  = esConfirmando ? `
+                        <div class="flex gap-1 justify-end">
+                            <button onclick="AppUsuarios.ejecutarEliminacion('${user.id}')" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-destructive/20 text-destructive" title="Confirmar"><i data-lucide="check" class="w-4 h-4"></i></button>
+                            <button onclick="AppUsuarios.cancelarEliminar()" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-secondary text-muted" title="Cancelar"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>` : `
+                        <div class="flex gap-1 justify-end">
+                            <button onclick="AppUsuarios.abrirModal('${user.id}')" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-secondary text-muted" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                            <button onclick="AppUsuarios.solicitarEliminar('${user.id}')" class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-destructive/20 text-muted hover:text-destructive" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>`;
+
+                    const tr = document.createElement("tr");
+                    tr.className = "hover:bg-secondary/30 transition-colors border-b border-border/50";
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 font-medium text-foreground">${user.nombre}</td>
+                        <td class="px-4 py-3 text-muted">${user.username}</td>
+                        <td class="px-4 py-3 text-muted">${user.telefono || '—'}</td>
+                        <td class="px-4 py-3"><span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClase}">${user.rol}</span></td>
+                        <td class="px-4 py-3">${badgeEstado}</td>
+                        <td class="px-4 py-3 text-right">${accionesHTML}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            renderizarMatriz: function() {
+                const thead = document.getElementById("matriz-head");
+                const tbody = document.getElementById("matriz-body");
+                if (!thead || !tbody) return;
+
+                const roles = Object.keys(this.permisosMapa);
+
+                let rowHead = `<tr class="border-b border-border"><th class="text-left py-2 pr-4 text-muted font-medium">Módulo</th>`;
+                roles.forEach(r => rowHead += `<th class="text-center py-2 px-3 text-muted font-medium text-xs">${r}</th>`);
+                rowHead += `</tr>`;
+                thead.innerHTML = rowHead;
+
+                let rowsBody = '';
+                this.modulos.forEach(mod => {
+                    let fila = `<tr class="border-b border-border/50 hover:bg-secondary/30"><td class="py-2.5 pr-4 text-foreground font-medium">${mod}</td>`;
+                    roles.forEach(rol => {
+                        const tieneAcceso = (this.permisosMapa[rol] || []).includes(mod);
+                        fila += `<td class="text-center py-2.5 px-3">
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full ${tieneAcceso ? 'bg-primary/20 text-primary' : 'bg-border/40 text-muted'}">
+                                <i data-lucide="${tieneAcceso ? 'check' : 'x'}" class="w-3 h-3"></i>
+                            </span>
+                        </td>`;
+                    });
+                    rowsBody += fila + `</tr>`;
+                });
+                tbody.innerHTML = rowsBody;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            abrirModal: function(id = null) {
+                const modal   = document.getElementById("modal-usuario");
+                const content = document.getElementById("modal-usuario-contenido");
+                const btnSave = document.getElementById("btn-guardar-usuario");
+                if (!modal || !content) return;
+
+                document.getElementById("usuario-id").value       = "";
+                document.getElementById("usuario-nombre").value   = "";
+                document.getElementById("usuario-username").value = "";
+                document.getElementById("usuario-telefono").value = "";
+                document.getElementById("usuario-password").value = "";
+
+                if (id) {
+                    const user = this.listaUsuarios.find(u => String(u.id) === String(id));
+                    if (user) {
+                        document.getElementById("modal-titulo").textContent    = "Editar Usuario";
+                        if (btnSave) btnSave.textContent                        = "Guardar Cambios";
+                        document.getElementById("usuario-id").value            = id;
+                        document.getElementById("usuario-nombre").value        = user.nombre;
+                        document.getElementById("usuario-username").value      = user.username;
+                        document.getElementById("usuario-telefono").value      = user.telefono || "";
+                        this.rolSeleccionado = user.rol;
+                        this.estadoActivo    = user.activo;
+                    }
+                } else {
+                    document.getElementById("modal-titulo").textContent = "Nuevo Usuario";
+                    if (btnSave) btnSave.textContent                     = "Crear Usuario";
+                    this.rolSeleccionado = this.listaRoles[0] || "Mesero";
+                    this.estadoActivo    = true;
+                }
+
+                this.renderizarSelectorRoles();
+                this.actualizarToggleUI();
+                modal.classList.remove("hidden");
+                setTimeout(() => content.classList.replace("scale-95", "scale-100"), 10);
+            },
+
+            cerrarModal: function() {
+                const modal   = document.getElementById("modal-usuario");
+                const content = document.getElementById("modal-usuario-contenido");
+                if (!modal || !content) return;
+                content.classList.replace("scale-100", "scale-95");
+                setTimeout(() => modal.classList.add("hidden"), 150);
+            },
+
+            renderizarSelectorRoles: function() {
+                const contenedor = document.getElementById("contenedor-roles");
+                if (!contenedor) return;
+                const roles = this.listaRoles.length > 0 ? this.listaRoles : Object.keys(this.permisosMapa);
+                contenedor.innerHTML = roles.map(r => `
+                    <button type="button" onclick="AppUsuarios.cambiarRol('${r}')"
+                        class="px-3 py-2 rounded-lg text-sm font-medium border transition-all ${this.rolSeleccionado === r ? 'bg-primary/20 text-primary border-primary/50' : 'bg-secondary text-muted border-border hover:border-primary/30'}">
+                        ${r}
+                    </button>
+                `).join('');
+            },
+
+            cambiarRol: function(nuevoRol) {
+                this.rolSeleccionado = nuevoRol;
+                this.renderizarSelectorRoles();
+            },
+
+            actualizarToggleUI: function() {
+                const toggleBg   = document.getElementById("toggle-estado");
+                const toggleBola = document.getElementById("toggle-bola");
+                const texto      = document.getElementById("texto-estado");
+                if (!toggleBg) return;
+
+                if (this.estadoActivo) {
+                    toggleBg.className   = "relative w-10 h-5 rounded-full bg-primary transition-colors";
+                    toggleBola.className = "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform translate-x-5";
+                    texto.textContent    = "Usuario activo";
+                } else {
+                    toggleBg.className   = "relative w-10 h-5 rounded-full bg-border transition-colors";
+                    toggleBola.className = "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform translate-x-0";
+                    texto.textContent    = "Usuario inactivo";
+                }
+            },
+
+            alternarEstado: function() {
+                this.estadoActivo = !this.estadoActivo;
+                this.actualizarToggleUI();
+            },
+
+            guardarUsuario: async function() {
+                const id       = document.getElementById("usuario-id").value;
+                const nombre   = document.getElementById("usuario-nombre").value.trim();
+                const username = document.getElementById("usuario-username").value.trim();
+                const telefono = document.getElementById("usuario-telefono").value.trim();
+                const password = document.getElementById("usuario-password").value;
+
+                if (!nombre || !username) {
+                    return alert("El nombre completo y el nombre de usuario son obligatorios.");
+                }
+                if (nombre.split(' ').filter(Boolean).length < 2) {
+                    return alert("Escribe al menos un nombre y un apellido separados por espacio.");
+                }
+                if (!id && !password) {
+                    return alert("La contraseña es obligatoria para usuarios nuevos.");
+                }
+
+                const payload = {
+                    id:       id ? parseInt(id) : null,
+                    nombre:   nombre,
+                    username: username,
+                    telefono: telefono,
+                    password: password,
+                    rol:      this.rolSeleccionado,
+                    activo:   this.estadoActivo
+                };
+
+                try {
+                    const response = await fetch(this.API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+
+                    if (data.estado === "exitoso") {
+                        this.cerrarModal();
+                        await this.sincronizarBackend();
+                    } else {
+                        alert(data.mensaje || "Error desconocido al guardar.");
+                    }
+                } catch (error) {
+                    console.error("Error al procesar el guardado:", error);
+                    alert("Error de conexión con el servidor.");
+                }
+            },
+
+            solicitarEliminar: function(id) {
+                this.idConfirmarEliminar = parseInt(id);
+                this.renderizarTabla(this.busquedaFiltro);
+            },
+
+            cancelarEliminar: function() {
+                this.idConfirmarEliminar = null;
+                this.renderizarTabla(this.busquedaFiltro);
+            },
+
+            ejecutarEliminacion: async function(id) {
+                try {
+                    const response = await fetch(this.API_URL, {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: parseInt(id) })
+                    });
+                    const data = await response.json();
+
+                    if (data.estado === "exitoso") {
+                        this.idConfirmarEliminar = null;
+                        await this.sincronizarBackend();
+                    } else {
+                        alert(data.mensaje || "Error al eliminar el usuario.");
+                    }
+                } catch (error) {
+                    console.error("Error ejecutando eliminación:", error);
+                    alert("Error de conexión con el servidor.");
+                }
+            },
+
+            inicializarBuscador: function() {
+                const input = document.getElementById("buscador-usuarios");
+                if (!input) return;
+                
+                // Limpiar eventos anteriores para evitar duplicados si se recarga el script
+                const nuevoInput = input.cloneNode(true);
+                input.parentNode.replaceChild(nuevoInput, input);
+                
+                nuevoInput.addEventListener("input", (e) => {
+                    this.busquedaFiltro = e.target.value;
+                    this.renderizarTabla(this.busquedaFiltro);
+                });
+            }
+        };
+    }
+
+    // Ejecutamos el init() directamente, dándole unos milisegundos para 
+    // asegurar que los elementos del DOM ya estén renderizados en pantalla
+    setTimeout(() => {
+        if (window.AppUsuarios) {
+            window.AppUsuarios.init();
+        }
+    }, 100);
+</script>

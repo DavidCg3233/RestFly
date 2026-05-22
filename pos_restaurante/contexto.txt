@@ -29,3 +29,377 @@ restfly/
         │       │── reportes/
         │       │── tablero/
         │       │── usuarios/
+
+
+
+
+        -- ============================================================
+--  SIGIR - Sistema de Gestión Integral de Restaurante
+--  Base de Datos Definitiva
+--  Motor: MySQL 8+  |  Charset: utf8mb4
+-- ============================================================
+
+CREATE DATABASE RestFly CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE RestFly;
+
+-- ============================================================
+--  TABLAS CATÁLOGO (3FN)
+-- ============================================================
+
+CREATE TABLE rol (
+    id_rol          INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_rol      VARCHAR(30)  NOT NULL,
+    descripcion     TEXT
+);
+
+CREATE TABLE estado_usuario (
+    id_estado_usuario   INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_estado_usuario VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE estado_mesa (
+    id_estado_mesa      INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_estado_mesa  VARCHAR(20) NOT NULL   -- libre | ocupada | reservada | en_limpieza
+);
+
+CREATE TABLE estado_producto (
+    id_estado_producto      INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_estado_producto  VARCHAR(30) NOT NULL  -- activo | inactivo | agotado
+);
+
+CREATE TABLE estado_pedido (
+    id_estado_pedido    INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_estado_pedido VARCHAR(20) NOT NULL   -- abierto | enviado | pagado | cancelado
+);
+
+-- Estado individual de cada ítem en cocina/bar (RF11, RF12)
+CREATE TABLE estado_detalle_pedido (
+    id_estado_detalle       INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_estado_detalle   VARCHAR(20) NOT NULL  -- pendiente | en_preparacion | listo | entregado
+);
+
+CREATE TABLE metodo_pago (
+    id_metodo_pago      INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_metodo_pago  VARCHAR(30) NOT NULL   -- efectivo | tarjeta | transferencia | etc.
+);
+
+CREATE TABLE tipo_comprobante (
+    id_tipo_comprobante     INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_tipo_comprobante VARCHAR(20) NOT NULL  -- factura | recibo | ticket
+);
+
+CREATE TABLE tipo_movimiento (
+    id_tipo_movimiento      INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_tipo_movimiento  VARCHAR(20) NOT NULL  -- ingreso | egreso | ajuste
+);
+
+CREATE TABLE categoria_producto (
+    id_categoria    INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_categoria VARCHAR(100) NOT NULL,
+    descripcion     TEXT
+);
+
+-- FIX: Área de trabajo para separar cocina/bar (RF11)
+CREATE TABLE area_trabajo (
+    id_area     INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_area VARCHAR(30) NOT NULL   -- Cocina | Bar | Postres | etc.
+);
+
+
+-- ============================================================
+--  SEGURIDAD Y USUARIOS (RF01 - RF05, RF22)
+-- ============================================================
+
+-- FIX: username en lugar de email como identificador de login (RF01)
+CREATE TABLE usuario (
+    id_usuario          INT AUTO_INCREMENT PRIMARY KEY,
+    username            VARCHAR(50)  NOT NULL UNIQUE,   -- login
+    primer_nombre       VARCHAR(50)  NOT NULL,
+    segundo_nombre      VARCHAR(50),
+    primer_apellido     VARCHAR(50)  NOT NULL,
+    segundo_apellido    VARCHAR(50),
+    contrasena          VARCHAR(255) NOT NULL,           -- hash Django
+    telefono            VARCHAR(15),
+    id_rol              INT NOT NULL,
+    id_estado_usuario   INT NOT NULL,
+    fecha_creacion      DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (id_rol)            REFERENCES rol(id_rol)                      ON DELETE RESTRICT,
+    FOREIGN KEY (id_estado_usuario) REFERENCES estado_usuario(id_estado_usuario) ON DELETE RESTRICT
+);
+
+-- FIX: Auditoría enriquecida con id_registro, valores anterior/nuevo e IP (RF22)
+CREATE TABLE auditoria (
+    id_auditoria            INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario              INT NOT NULL,
+    accion_realizada        TEXT NOT NULL,
+    modulo_afectado         VARCHAR(50),
+    id_registro_afectado    INT NULL,       -- PK del registro que fue tocado
+    valor_anterior          TEXT NULL,      -- JSON o descripción del estado previo
+    valor_nuevo             TEXT NULL,      -- JSON o descripción del estado nuevo
+    ip_usuario              VARCHAR(45) NULL,
+    fecha_hora              DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE RESTRICT
+);
+
+
+-- ============================================================
+--  GESTIÓN OPERATIVA - MESAS (RF06, RF07)
+-- ============================================================
+
+CREATE TABLE mesa (
+    id_mesa         INT AUTO_INCREMENT PRIMARY KEY,
+    numero_mesa     INT NOT NULL UNIQUE,
+    capacidad       INT NOT NULL,
+    id_estado_mesa  INT NOT NULL,
+
+    FOREIGN KEY (id_estado_mesa) REFERENCES estado_mesa(id_estado_mesa) ON DELETE RESTRICT
+);
+
+-- FIX: Tabla reserva para respaldar el estado "reservada" en mesa (RF07)
+CREATE TABLE reserva (
+    id_reserva          INT AUTO_INCREMENT PRIMARY KEY,
+    id_mesa             INT NOT NULL,
+    nombre_cliente      VARCHAR(100) NOT NULL,
+    fecha_reserva       DATETIME NOT NULL,
+    numero_personas     INT,
+    telefono_contacto   VARCHAR(15),
+    activa              BOOLEAN DEFAULT TRUE,
+    fecha_creacion      DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (id_mesa) REFERENCES mesa(id_mesa) ON DELETE RESTRICT
+);
+
+
+-- ============================================================
+--  PRODUCTOS E INVENTARIO (RF17 - RF19)
+-- ============================================================
+
+-- FIX: id_area para filtrar pedidos por cocina/bar (RF11)
+CREATE TABLE producto (
+    id_producto         INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_producto     VARCHAR(100) NOT NULL,
+    descripcion         TEXT,
+    precio              DECIMAL(10,2) NOT NULL,
+    id_categoria        INT NOT NULL,
+    id_estado_producto  INT NOT NULL,
+    id_area             INT NULL,    -- NULL si no aplica (ej: producto que no pasa por cocina)
+
+    FOREIGN KEY (id_categoria)       REFERENCES categoria_producto(id_categoria) ON DELETE RESTRICT,
+    FOREIGN KEY (id_estado_producto) REFERENCES estado_producto(id_estado_producto) ON DELETE RESTRICT,
+    FOREIGN KEY (id_area)            REFERENCES area_trabajo(id_area)             ON DELETE SET NULL
+);
+
+-- FIX: unidad_medida agregada (kg, lt, unidades, etc.)
+CREATE TABLE inventario (
+    id_inventario       INT AUTO_INCREMENT PRIMARY KEY,
+    id_producto         INT NOT NULL UNIQUE,
+    stock_actual        DECIMAL(10,3) NOT NULL DEFAULT 0,
+    stock_minimo        DECIMAL(10,3) NOT NULL DEFAULT 0,
+    unidad_medida       VARCHAR(20) NOT NULL DEFAULT 'unidades',  -- kg | lt | unidades | porciones
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (id_producto) REFERENCES producto(id_producto) ON DELETE RESTRICT
+);
+
+-- FIX: Historial de movimientos de inventario para trazabilidad (RF18)
+CREATE TABLE historial_inventario (
+    id_historial        INT AUTO_INCREMENT PRIMARY KEY,
+    id_inventario       INT NOT NULL,
+    cantidad_anterior   DECIMAL(10,3) NOT NULL,
+    cantidad_nueva      DECIMAL(10,3) NOT NULL,
+    motivo              VARCHAR(50) NOT NULL,  -- 'venta' | 'ajuste_manual' | 'entrada' | 'merma'
+    id_venta            INT NULL,              -- FK se agrega después de crear la tabla venta
+    id_usuario          INT NOT NULL,
+    fecha_movimiento    DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (id_inventario) REFERENCES inventario(id_inventario) ON DELETE RESTRICT,
+    FOREIGN KEY (id_usuario)    REFERENCES usuario(id_usuario)        ON DELETE RESTRICT
+);
+
+-- FIX: Persistencia de alertas de stock bajo (RF19)
+CREATE TABLE alerta_inventario (
+    id_alerta       INT AUTO_INCREMENT PRIMARY KEY,
+    id_inventario   INT NOT NULL,
+    mensaje         TEXT NOT NULL,
+    leida           BOOLEAN DEFAULT FALSE,
+    fecha_alerta    DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (id_inventario) REFERENCES inventario(id_inventario) ON DELETE RESTRICT
+);
+
+
+-- ============================================================
+--  GESTIÓN DE PEDIDOS (RF08 - RF12)
+-- ============================================================
+
+CREATE TABLE pedido (
+    id_pedido           INT AUTO_INCREMENT PRIMARY KEY,
+    id_mesa             INT NOT NULL,
+    id_usuario          INT NOT NULL,          -- Mesero que tomó el pedido
+    fecha_pedido        DATETIME DEFAULT CURRENT_TIMESTAMP,
+    id_estado_pedido    INT NOT NULL,
+
+    FOREIGN KEY (id_mesa)           REFERENCES mesa(id_mesa)                 ON DELETE RESTRICT,
+    FOREIGN KEY (id_usuario)        REFERENCES usuario(id_usuario)           ON DELETE RESTRICT,
+    FOREIGN KEY (id_estado_pedido)  REFERENCES estado_pedido(id_estado_pedido) ON DELETE RESTRICT
+);
+
+CREATE TABLE detalle_pedido (
+    id_detalle          INT AUTO_INCREMENT PRIMARY KEY,
+    id_pedido           INT NOT NULL,
+    id_producto         INT NOT NULL,
+    cantidad            INT NOT NULL,
+    precio_unitario     DECIMAL(10,2) NOT NULL,  -- snapshot del precio al momento del pedido
+    id_estado_detalle   INT NOT NULL,            -- control plato a plato en cocina/bar (RF11, RF12)
+    notas               VARCHAR(255) NULL,        -- instrucciones especiales del cliente
+
+    FOREIGN KEY (id_pedido)         REFERENCES pedido(id_pedido)                        ON DELETE RESTRICT,
+    FOREIGN KEY (id_producto)       REFERENCES producto(id_producto)                    ON DELETE RESTRICT,
+    FOREIGN KEY (id_estado_detalle) REFERENCES estado_detalle_pedido(id_estado_detalle) ON DELETE RESTRICT
+);
+
+
+-- ============================================================
+--  VENTAS Y CAJA (RF13 - RF16)
+-- ============================================================
+
+-- FIX: estado_caja explícito + id_caja en venta
+CREATE TABLE caja (
+    id_caja         INT AUTO_INCREMENT PRIMARY KEY,
+    fecha_apertura  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_cierre    DATETIME NULL,
+    monto_inicial   DECIMAL(10,2) NOT NULL,
+    monto_final     DECIMAL(10,2) NULL,
+    estado_caja     VARCHAR(20) NOT NULL DEFAULT 'abierta',  -- abierta | cerrada
+    id_usuario      INT NOT NULL,                             -- Cajero que abre/cierra
+
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE RESTRICT
+);
+
+-- FIX: id_caja para relacionar cada venta con su sesión de caja (RF16)
+CREATE TABLE venta (
+    id_venta        INT AUTO_INCREMENT PRIMARY KEY,
+    id_pedido       INT NOT NULL UNIQUE,         -- 1 pedido -> 1 venta
+    id_caja         INT NOT NULL,                -- a qué sesión de caja pertenece
+    fecha_venta     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    total_venta     DECIMAL(10,2) NOT NULL,
+    id_metodo_pago  INT NOT NULL,
+
+    FOREIGN KEY (id_pedido)     REFERENCES pedido(id_pedido)         ON DELETE RESTRICT,
+    FOREIGN KEY (id_caja)       REFERENCES caja(id_caja)             ON DELETE RESTRICT,
+    FOREIGN KEY (id_metodo_pago) REFERENCES metodo_pago(id_metodo_pago) ON DELETE RESTRICT
+);
+
+-- FK diferida: historial_inventario -> venta (ciclo evitado creando primero venta)
+ALTER TABLE historial_inventario
+    ADD CONSTRAINT fk_historial_venta
+    FOREIGN KEY (id_venta) REFERENCES venta(id_venta) ON DELETE SET NULL;
+
+CREATE TABLE comprobante (
+    id_comprobante      INT AUTO_INCREMENT PRIMARY KEY,
+    id_venta            INT NOT NULL UNIQUE,
+    numero_comprobante  VARCHAR(50) NOT NULL UNIQUE,
+    fecha_emision       DATETIME DEFAULT CURRENT_TIMESTAMP,
+    id_tipo_comprobante INT NOT NULL,
+    nombre_cliente      VARCHAR(100) NULL,   -- datos opcionales del cliente para factura
+    nit_cliente         VARCHAR(30)  NULL,
+
+    FOREIGN KEY (id_venta)           REFERENCES venta(id_venta)                     ON DELETE RESTRICT,
+    FOREIGN KEY (id_tipo_comprobante) REFERENCES tipo_comprobante(id_tipo_comprobante) ON DELETE RESTRICT
+);
+
+-- FIX: id_venta en movimiento_caja para trazabilidad del ingreso (RF16)
+CREATE TABLE movimiento_caja (
+    id_movimiento       INT AUTO_INCREMENT PRIMARY KEY,
+    id_caja             INT NOT NULL,
+    id_tipo_movimiento  INT NOT NULL,
+    id_venta            INT NULL,           -- NULL para movimientos manuales (apertura, egreso, etc.)
+    monto               DECIMAL(10,2) NOT NULL,
+    descripcion         TEXT,
+    fecha_movimiento    DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (id_caja)           REFERENCES caja(id_caja)                     ON DELETE RESTRICT,
+    FOREIGN KEY (id_tipo_movimiento) REFERENCES tipo_movimiento(id_tipo_movimiento) ON DELETE RESTRICT,
+    FOREIGN KEY (id_venta)          REFERENCES venta(id_venta)                   ON DELETE SET NULL
+);
+CREATE TABLE receta (
+    id_receta INT AUTO_INCREMENT PRIMARY KEY,
+    id_plato INT NOT NULL,
+    id_insumo INT NOT NULL,
+    cantidad DECIMAL(10,3) NOT NULL,
+    
+    -- Llave foránea hacia el Producto (El platillo que se vende)
+    CONSTRAINT fk_receta_plato 
+        FOREIGN KEY (id_plato) 
+        REFERENCES producto(id_producto) 
+        ON DELETE RESTRICT,
+        
+    -- Llave foránea hacia el Inventario (El insumo/materia prima que se gasta)
+    CONSTRAINT fk_receta_insumo 
+        FOREIGN KEY (id_insumo) 
+        REFERENCES inventario(id_inventario) 
+        ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+--  DATOS INICIALES (INSERT catálogos base)
+-- ============================================================
+
+INSERT INTO rol (nombre_rol, descripcion) VALUES
+    ('Administrador', 'Control total del sistema'),
+    ('Gerente',       'Acceso a reportes y dashboard'),
+    ('Cajero',        'Gestión de ventas y caja'),
+    ('Mesero',        'Toma y seguimiento de pedidos'),
+    ('Inventariador', 'Gestión de inventario'),
+    ('Operario',      'Vista de cocina o bar');
+
+INSERT INTO estado_usuario (nombre_estado_usuario) VALUES
+    ('activo'), ('inactivo'), ('bloqueado');
+
+INSERT INTO estado_mesa (nombre_estado_mesa) VALUES
+    ('libre'), ('ocupada'), ('reservada'), ('en_limpieza');
+
+INSERT INTO estado_producto (nombre_estado_producto) VALUES
+    ('activo'), ('inactivo'), ('agotado');
+
+INSERT INTO estado_pedido (nombre_estado_pedido) VALUES
+    ('abierto'), ('enviado'), ('pagado'), ('cancelado');
+
+INSERT INTO estado_detalle_pedido (nombre_estado_detalle) VALUES
+    ('pendiente'), ('en_preparacion'), ('listo'), ('entregado');
+
+INSERT INTO metodo_pago (nombre_metodo_pago) VALUES
+    ('efectivo'), ('tarjeta_debito'), ('tarjeta_credito'), ('transferencia'), ('nequi'), ('daviplata');
+
+INSERT INTO tipo_comprobante (nombre_tipo_comprobante) VALUES
+    ('factura'), ('recibo'), ('ticket');
+
+INSERT INTO tipo_movimiento (nombre_tipo_movimiento) VALUES
+    ('ingreso'), ('egreso'), ('ajuste');
+
+INSERT INTO area_trabajo (nombre_area) VALUES
+    ('Cocina'), ('Bar'), ('Postres');
+    
+
+
+INSERT INTO usuario (
+    username, 
+    primer_nombre, 
+    primer_apellido, 
+    contrasena, 
+    id_rol, 
+    id_estado_usuario
+) VALUES (
+    'admin', 
+    'Jorge', 
+    'Montenegro', 
+    '12345', 
+    1, 
+    1 
+);
+
+SELECT * FROM usuario WHERE username = 'admin';
+SELECT * FROM caja_movimiento ORDER BY id DESC;
+SHOW TABLES LIKE '%caja%';

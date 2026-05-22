@@ -1,31 +1,47 @@
-from ..modelos.modelo_usuario import UsuarioSistema, RolUsuario, EstadoDelUsuario
+from ..modelos.modelo_usuario import Usuario, Rol, EstadoUsuario
 
-class UsuarioRepository:
-    
+
+class RepositorioUsuario:
+
     @staticmethod
     def obtener_todos():
-        return UsuarioSistema.objects.select_related('id_rol', 'id_estado_usuario').all()
+        return Usuario.objects.select_related('id_rol', 'id_estado_usuario').order_by('-fecha_creacion')
 
     @staticmethod
-    def obtener_por_id(id_usuario):
+    def obtener_por_id(usuario_id):
         try:
-            return UsuarioSistema.objects.select_related('id_rol', 'id_estado_usuario').get(pk=id_usuario)
-        except UsuarioSistema.DoesNotExist:
+            return Usuario.objects.select_related('id_rol', 'id_estado_usuario').get(id_usuario=usuario_id)
+        except Usuario.DoesNotExist:
             return None
 
     @staticmethod
-    def buscar_rol_por_nombre(nombre_rol):
-        return RolUsuario.objects.filter(nombre_rol=nombre_rol).first()
+    def obtener_por_username(username):
+        return Usuario.objects.filter(username=username).first()
 
     @staticmethod
-    def buscar_estado_por_nombre(nombre_estado):
-        return EstadoDelUsuario.objects.filter(nombre_estado_usuario=nombre_estado).first()
+    def obtener_rol_por_nombre(nombre_rol):
+        try:
+            return Rol.objects.get(nombre_rol=nombre_rol)
+        except Rol.DoesNotExist:
+            return None
 
     @staticmethod
-    def guardar(usuario_obj):
-        usuario_obj.save()
-        return usuario_obj
+    def obtener_estado_por_nombre(nombre_estado):
+        try:
+            return EstadoUsuario.objects.get(nombre_estado_usuario=nombre_estado)
+        except EstadoUsuario.DoesNotExist:
+            return None
 
     @staticmethod
-    def eliminar(usuario_obj):
-        usuario_obj.delete()
+    def obtener_roles():
+        return list(Rol.objects.values('id_rol', 'nombre_rol'))
+
+    @staticmethod
+    def guardar(usuario):
+        usuario.save()
+        return usuario
+
+    @staticmethod
+    def eliminar(usuario):
+        usuario.delete()
+        return True

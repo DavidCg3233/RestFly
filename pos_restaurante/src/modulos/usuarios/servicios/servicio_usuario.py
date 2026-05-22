@@ -1,73 +1,91 @@
 from django.contrib.auth.hashers import make_password
-from ..modelos.modelo_usuario import UsuarioSistema
-from ..repositorios.repositorio_usuario import UsuarioRepository
+from ..repositorios.repositorio_usuario import RepositorioUsuario
+from ..modelos.modelo_usuario import Usuario
 
-class UsuarioService:
+
+class ServicioUsuario:
 
     @staticmethod
     def listar_usuarios():
-        usuarios = UsuarioRepository.obtener_todos()
-        resultado = []
-        for u in usuarios:
-            nombre_completo = f"{u.primer_nombre} {u.primer_apellido}"
-            if u.segundo_nombre:
-                nombre_completo = f"{u.primer_nombre} {u.segundo_nombre} {u.primer_apellido}"
-            
-            resultado.append({
-                "id": u.id_usuario,
-                "nombre": nombre_completo,
-                "correo": u.username, 
-                "rol": u.id_rol.nombre_rol,
-                "activo": u.id_estado_usuario.nombre_estado_usuario == "Activo"
-            })
-        return resultado
+        usuarios = RepositorioUsuario.obtener_todos()
+        return [u.to_dict() for u in usuarios]
 
     @staticmethod
-    def registrar_o_actualizar_usuario(datos):
-        id_usuario = datos.get("id")
-        nombre_completo = datos.get("nombre", "").strip()
-        correo = datos.get("correo", "").strip()
-        nombre_rol = datos.get("rol", "Mesero")
-        es_activo = datos.get("activo", True)
+    def listar_roles():
+        return RepositorioUsuario.obtener_roles()
 
-        partes_nombre = nombre_completo.split()
-        primer_nombre = partes_nombre[0] if len(partes_nombre) > 0 else "SinNombre"
-        segundo_nombre = partes_nombre[1] if len(partes_nombre) > 2 else ""
-        primer_apellido = partes_nombre[-1] if len(partes_nombre) > 1 else "SinApellido"
-        segundo_apellido = partes_nombre[-2] if len(partes_nombre) == 4 else ""
+    @staticmethod
+    def procesar_guardado(datos):
+        usuario_id    = datos.get('id')
+        nombre_completo = datos.get('nombre', '').strip()
+        username      = datos.get('username', '').strip()
+        password_raw  = datos.get('password', '')
+        rol_nombre    = datos.get('rol', 'Mesero')
+        activo        = datos.get('activo', True)
+        telefono      = datos.get('telefono', '').strip()
 
-        rol_obj = UsuarioRepository.buscar_rol_por_nombre(nombre_rol)
+        if not nombre_completo or not username:
+            raise ValueError("El nombre completo y el nombre de usuario son obligatorios.")
+
+        # Separar nombre en primer_nombre y primer_apellido
+        partes = nombre_completo.split(' ', 1)
+        primer_nombre   = partes[0]
+        primer_apellido = partes[1] if len(partes) > 1 else ''
+
+        if not primer_apellido:
+            raise ValueError("Ingresa al menos nombre y apellido separados por espacio.")
+
+        # Resolver FK rol
+        rol_obj = RepositorioUsuario.obtener_rol_por_nombre(rol_nombre)
         if not rol_obj:
-            raise ValueError(f"El rol '{nombre_rol}' no existe.")
+            raise ValueError(f"El rol '{rol_nombre}' no existe en la base de datos.")
 
-        estado_str = "Activo" if es_activo else "Inactivo"
-        estado_obj = UsuarioRepository.buscar_estado_por_nombre(estado_str)
+        # Resolver FK estado_usuario
+        nombre_estado = "activo" if activo else "inactivo"
+        estado_obj = RepositorioUsuario.obtener_estado_por_nombre(nombre_estado)
         if not estado_obj:
-            raise ValueError(f"El estado '{estado_str}' no está configurado.")
+            raise ValueError(f"El estado '{nombre_estado}' no existe en la base de datos.")
 
-        if id_usuario:
-            usuario_obj = UsuarioRepository.obtener_por_id(id_usuario)
-            if not usuario_obj:
-                raise ValueError("Usuario no encontrado.")
+        if usuario_id:
+            # ── EDITAR ──
+            usuario = RepositorioUsuario.obtener_por_id(usuario_id)
+            if not usuario:
+                raise ValueError("El usuario solicitado no existe.")
+
+            usuario.primer_nombre    = primer_nombre
+            usuario.primer_apellido  = primer_apellido
+            usuario.username         = username
+            usuario.telefono         = telefono
+            usuario.id_rol           = rol_obj
+            usuario.id_estado_usuario = estado_obj
+
+            if password_raw:
+                usuario.contrasena = make_password(password_raw)
         else:
-            usuario_obj = UsuarioSistema(contrasena=make_password("RestFly2026*"))
+            # ── CREAR ──
+            if not password_raw:
+                raise ValueError("La contraseña es obligatoria para usuarios nuevos.")
 
-        usuario_obj.username = correo
-        usuario_obj.primer_nombre = primer_nombre
-        usuario_obj.segundo_nombre = segundo_nombre if segundo_nombre else None
-        usuario_obj.primer_apellido = primer_apellido
-        usuario_obj.segundo_apellido = segundo_apellido if segundo_apellido else None
-        usuario_obj.id_rol = rol_obj
-        usuario_obj.id_estado_usuario = estado_obj
+            usuario = Usuario(
+                primer_nombre    = primer_nombre,
+                primer_apellido  = primer_apellido,
+                username         = username,
+                contrasena       = make_password(password_raw),
+                telefono         = telefono,
+                id_rol           = rol_obj,
+                id_estado_usuario = estado_obj
+            )
 
-        UsuarioRepository.guardar(usuario_obj)
-        return {"id_usuario": usuario_obj.id_usuario, "mensaje": "Proceso completado"}
+        RepositorioUsuario.guardar(usuario)
+        return usuario.to_dict()
 
     @staticmethod
-    def dar_de_baja_usuario(id_usuario):
-        usuario_obj = UsuarioRepository.obtener_por_id(id_usuario)
-        if not usuario_obj:
-            raise ValueError("El usuario solicitado no existe.")
-        
-        UsuarioRepository.eliminar(usuario_obj)
-        return True
+    def procesar_eliminacion(usuario_id):
+        if not usuario_id:
+            raise ValueError("ID de usuario inválido.")
+
+        usuario = RepositorioUsuario.obtener_por_id(usuario_id)
+        if not usuario:
+            raise ValueError("El usuario que intenta eliminar no existe.")
+
+        return RepositorioUsuario.eliminar(usuario)

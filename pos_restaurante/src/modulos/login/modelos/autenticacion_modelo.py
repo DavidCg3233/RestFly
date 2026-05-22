@@ -35,3 +35,13 @@ class Usuario(models.Model):
     class Meta:
         db_table = 'usuario'
         managed = False
+
+    def to_dict(self):
+        return {
+            "id":       self.id_usuario,
+            "nombre":   f"{self.primer_nombre} {self.primer_apellido}",
+            "username": self.username,
+            "telefono": self.telefono or "",
+            "rol":      self.id_rol.nombre_rol,
+            "activo":   self.id_estado_usuario.nombre_estado_usuario == "activo"
+        }

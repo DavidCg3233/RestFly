@@ -1,6 +1,6 @@
 from django.urls import path
-from .controladores.controlador_usuario import UsuarioControllerView
+from .controladores import controlador_usuario
 
 urlpatterns = [
-    path('', UsuarioControllerView.as_view(), name='api_usuarios'),
+    path('', controlador_usuario.UsuarioControllerView.as_view(), name='api_usuarios'),
 ]

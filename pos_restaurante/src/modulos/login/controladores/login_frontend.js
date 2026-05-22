@@ -42,7 +42,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const rol = datos.usuario.rol_sistema;
                 
                 if (rol === "ADMINISTRADOR") {
-                    // RUTA CORREGIDA HACIA LA CARCASA
                     window.location.href = "../../../compartido/vistas/base.html";
                 } else if (rol === "CAJERO") {
                     window.location.href = "../../caja/vistas/index.html";
