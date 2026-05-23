@@ -7,7 +7,7 @@
             </div>
             <h2 class="text-2xl font-bold text-foreground mb-2">Caja Cerrada</h2>
             <p class="text-muted text-sm mb-6">No puedes procesar facturación ni cobros. Por favor, abre el turno en el módulo de Control de Caja para continuar.</p>
-            <button onclick="window.location.href='/caja'" class="px-6 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-sm">
+            <button onclick="cargarModulo('../../modulos/caja/vistas/ControlCaja_index.html', 'Control de Caja', '../../modulos/caja/controladores/ControlCaja_frontend.js')" class="px-6 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-sm">
                 Ir a Control de Caja
             </button>
         </div>
@@ -295,8 +295,8 @@
                     <div class="flex justify-between items-center text-sm p-3 rounded-lg bg-[var(--secundario)]/30 border border-[var(--borde)]">
                         <span class="text-[var(--texto-apagado)] font-medium capitalize flex items-center gap-2">
                             ${method === 'efectivo' ? '<i data-lucide="dollar-sign" class="w-4 h-4"></i>' : 
-                              method === 'tarjeta' ? '<i data-lucide="credit-card" class="w-4 h-4"></i>' : 
-                              '<i data-lucide="building-2" class="w-4 h-4"></i>'}
+                                method === 'tarjeta' ? '<i data-lucide="credit-card" class="w-4 h-4"></i>' : 
+                                '<i data-lucide="building-2" class="w-4 h-4"></i>'}
                             ${method}
                         </span>
                         <div class="text-right">

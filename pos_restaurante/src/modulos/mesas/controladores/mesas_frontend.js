@@ -1,65 +1,99 @@
-// Validamos si la data ya existe en window para no sobreescribirla al cambiar de módulo.
-// Usamos var porque let/const arrojan error de redeclaración cuando el index.html vuelve a inyectar el script.
+// C:\Users\Administrador\Desktop\POS RESTAURANTE\RestFly\pos_restaurante\src\modulos\mesas\controladores\mesas_frontend.js
 
-var ESTADOS = window.ESTADOS || {
+// 1. Evitamos el error de "has already been declared" usando window o var
+window.ESTADOS = window.ESTADOS || {
     libre: { label: "Libre", bg: "bg-emerald-500/10", border: "border-emerald-500/20", dot: "bg-emerald-500", text: "text-emerald-500", icon: "check-circle" },
     ocupada: { label: "Ocupada", bg: "bg-rose-500/10", border: "border-rose-500/20", dot: "bg-rose-500", text: "text-rose-500", icon: "user" },
     reservada: { label: "Reservada", bg: "bg-amber-500/10", border: "border-amber-500/20", dot: "bg-amber-500", text: "text-amber-500", icon: "calendar" },
     limpieza: { label: "Limpieza", bg: "bg-blue-500/10", border: "border-blue-500/20", dot: "bg-blue-400", text: "text-blue-400", icon: "sparkles" },
 };
 
-var mesas = window.mesas || [
-    { id: "m1", number: "01", zone: "TERRAZA", capacity: 4, status: "libre", orderId: null },
-    { id: "m2", number: "02", zone: "TERRAZA", capacity: 2, status: "ocupada", orderId: "p1" },
-    { id: "m3", number: "03", zone: "SALÓN VIP", capacity: 6, status: "reservada", orderId: null },
-    { id: "m4", number: "04", zone: "SALÓN VIP", capacity: 4, status: "limpieza", orderId: null },
-    { id: "m5", number: "05", zone: "BARRA", capacity: 1, status: "libre", orderId: null },
-];
+window.API_BASE_URL_MESAS = 'http://127.0.0.1:8000/api/mesas/api';
 
-var productos = window.productos || [
-    { id: "c1", name: "Hamb. Premium", desc: "Angus 200g, cheddar", price: 14.00, cat: "cocina" },
-    { id: "c2", name: "Tacos Al Pastor", desc: "3 unidades + piña", price: 10.50, cat: "cocina" },
-    { id: "b1", name: "Coca Cola", desc: "Vidrio 350ml", price: 2.50, cat: "bar" },
-    { id: "b2", name: "Gin Tonic", desc: "Tanqueray + frutos rojos", price: 9.00, cat: "bar" },
-    { id: "p1", name: "Brownie Helado", desc: "Chocolate 70%", price: 5.50, cat: "postre" },
-];
+// Vaciamos la memoria global (usamos var para evitar errores de redeclaración)
+var mesas = [];
+var productos = [];
+var pedidos = [];
 
-var pedidos = window.pedidos || [
-    { id: "p1", mesero: "Carlos R.", total: 24.50, items: [{ prodId: "c1", name: "Hamb. Premium", price: 14.00, qty: 1 }, { prodId: "b2", name: "Gin Tonic", price: 9.00, qty: 1 }] }
-];
-
-var state = window.stateMesas || { // Renombramos internamente para que no choque con otros módulos
+var state = window.stateMesas || { 
     filter: "all",
     activeMesaId: null,
     activeOrderId: null,
     activeTab: "cocina"
 };
-
-// Guardamos referencias globales para la próxima vez que entres al módulo
-window.ESTADOS = ESTADOS;
-window.mesas = mesas;
-window.productos = productos;
-window.pedidos = pedidos;
 window.stateMesas = state;
 
-function initMesas() {
-    // Un pequeño respiro de 50ms asegura que el index.html haya renderizado los divs
-    setTimeout(() => {
-        const container = document.getElementById('contenedor-filtros');
-        if (container) {
+// ==========================================
+// 1. CARGA INICIAL DESDE EL BACKEND
+// ==========================================
+window.initMesas = async function() {
+    try {
+        const response = await fetch(`${window.API_BASE_URL_MESAS}/estado-inicial/`);
+        const result = await response.json();
+
+        if (result.estado === 'exitoso') {
+            mesas = result.data.mesas;
+            productos = result.data.productos;
+            pedidos = result.data.pedidos;
+            console.log("MESAS DEL BACKEND:", mesas);
             renderFiltros();
             renderMesas();
+        } else {
+            console.error("Error del servidor:", result.mensaje);
         }
-    }, 50);
-}
+    } catch (error) {
+        console.error("Error de conexión al cargar mesas:", error);
+    }
+};
 
-function renderFiltros() {
+// ==========================================
+// 2. ACTUALIZACIÓN DE ESTADO HACIA EL BACKEND
+// ==========================================
+window.cambiarEstadoMesa = async function(nuevoEstado) {
+    const mesaActivaId = state.activeMesaId;
+
+    try {
+        const response = await fetch(`${window.API_BASE_URL_MESAS}/estado-mesa/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id_mesa: mesaActivaId,
+                estado: nuevoEstado
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.estado === 'exitoso') {
+            const mesa = mesas.find(m => m.id === mesaActivaId);
+            mesa.status = nuevoEstado;
+            if (nuevoEstado === 'libre') mesa.orderId = null;
+            
+            renderBotonesEstado();
+            renderMesas();
+            renderFiltros();
+        } else {
+            alert("No se pudo cambiar el estado: " + result.mensaje);
+        }
+    } catch (error) {
+        console.error("Error de red al cambiar estado:", error);
+        alert("Error de conexión con el servidor.");
+    }
+};
+
+// ==========================================
+// 3. RENDERIZADO Y LÓGICA DE INTERFAZ
+// ==========================================
+
+window.renderFiltros = function() {
     const container = document.getElementById('contenedor-filtros');
     if (!container) return;
     container.innerHTML = '';
 
-    Object.keys(ESTADOS).forEach(key => {
-        const config = ESTADOS[key];
+    Object.keys(window.ESTADOS).forEach(key => {
+        const config = window.ESTADOS[key];
         const count = mesas.filter(m => m.status === key).length;
         const isActive = state.filter === key;
 
@@ -73,7 +107,7 @@ function renderFiltros() {
             </button>
         `;
     });
-}
+};
 
 window.setFilter = function(key) {
     state.filter = state.filter === key ? 'all' : key;
@@ -81,7 +115,7 @@ window.setFilter = function(key) {
     renderMesas();
 };
 
-function renderMesas() {
+window.renderMesas = function() {
     const container = document.getElementById('contenedor-zonas');
     if (!container) return;
     container.innerHTML = '';
@@ -94,7 +128,7 @@ function renderMesas() {
         if (zoneMesas.length === 0) return;
 
         const zoneHtml = zoneMesas.map(mesa => {
-            const conf = ESTADOS[mesa.status];
+            const conf = window.ESTADOS[mesa.status];
             const pedido = pedidos.find(p => p.id === mesa.orderId);
             
             return `
@@ -126,7 +160,7 @@ function renderMesas() {
         `;
     });
     if(typeof lucide !== 'undefined') lucide.createIcons();
-}
+};
 
 window.abrirMesa = function(id) {
     const mesa = mesas.find(m => m.id === id);
@@ -159,29 +193,20 @@ window.cerrarModalPedido = function() {
     state.activeMesaId = null;
 };
 
-function renderBotonesEstado() {
+window.renderBotonesEstado = function() {
     const mesa = mesas.find(m => m.id === state.activeMesaId);
     const container = document.getElementById('modal-botones-estado');
     container.innerHTML = '';
 
-    Object.keys(ESTADOS).forEach(key => {
+    Object.keys(window.ESTADOS).forEach(key => {
         const isActive = mesa.status === key;
-        const conf = ESTADOS[key];
+        const conf = window.ESTADOS[key];
         container.innerHTML += `
             <button onclick="cambiarEstadoMesa('${key}')" class="px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${isActive ? 'bg-background shadow-sm ' + conf.text : 'text-muted hover:text-foreground'}">
                 ${conf.label}
             </button>
         `;
     });
-}
-
-window.cambiarEstadoMesa = function(nuevoEstado) {
-    const mesa = mesas.find(m => m.id === state.activeMesaId);
-    mesa.status = nuevoEstado;
-    if (nuevoEstado === 'libre') mesa.orderId = null;
-    renderBotonesEstado();
-    renderMesas();
-    renderFiltros();
 };
 
 window.cambiarTab = function(cat) {
@@ -243,7 +268,7 @@ window.updateQty = function(prodId, delta) {
     renderMesas();
 };
 
-function renderPedido() {
+window.renderPedido = function() {
     const container = document.getElementById('contenedor-pedido-items');
     const totalEl = document.getElementById('pedido-total');
     const pedido = pedidos.find(p => p.id === state.activeOrderId);
@@ -271,15 +296,117 @@ function renderPedido() {
         totalEl.innerText = `$${pedido.total.toFixed(2)}`;
     }
     if(typeof lucide !== 'undefined') lucide.createIcons();
-}
+};
 
-window.confirmarPedido = function() {
+window.confirmarPedido = async function() {
     const pedido = pedidos.find(p => p.id === state.activeOrderId);
     if (!pedido || pedido.items.length === 0) return alert("El pedido está vacío");
     
-    alert(`Comanda enviada!\nOrden: ${state.activeOrderId}\nTotal: $${pedido.total.toFixed(2)}`);
-    cerrarModalPedido();
+    // Sacamos el ID del mesero que tomó la orden
+    const usuarioString = localStorage.getItem("usuario_sesion");
+    const usuario = usuarioString ? JSON.parse(usuarioString) : null;
+    const id_usuario = usuario ? usuario.id_usuario : 1; // Por defecto el 1 (Admin) si falla
+
+    const payload = {
+        id_mesa: state.activeMesaId,
+        id_usuario: id_usuario,
+        items: pedido.items
+    };
+
+    try {
+        const response = await fetch(`${window.API_BASE_URL_MESAS}/enviar-comanda/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.estado === 'exitoso') {
+            alert(`¡Comanda enviada a cocina!\nTotal: $${pedido.total.toFixed(2)}`);
+            cerrarModalPedido();
+            window.initMesas(); // Recargamos para ver la mesa roja (Ocupada)
+        } else {
+            alert("Error al enviar la comanda: " + result.mensaje);
+        }
+    } catch (error) {
+        console.error("Error al enviar pedido:", error);
+        alert("Error de conexión al enviar la comanda.");
+    }
 };
 
-// Arrancamos la app
-initMesas();
+// ==========================================
+// 4. CREACIÓN DE MESAS Y VALIDACIÓN DE ROL
+// ==========================================
+
+window.validarRolYNombre = function() {
+    // 1. Leemos la variable que guardaste en el login
+    const usuarioString = localStorage.getItem("usuario_sesion");
+
+    if (usuarioString) {
+        const usuario = JSON.parse(usuarioString);
+
+        // 2. Actualizamos el nombre en la interfaz
+        const spanNombre = document.getElementById("nombre-mesero");
+        if (spanNombre) {
+            spanNombre.innerText = usuario.nombre_completo;
+        }
+
+        // 3. Validamos si el rol es el definido en tu BD para mostrar el botón
+        if (usuario.rol_sistema === "ADMINISTRADOR") {
+            const btnCrearMesa = document.getElementById("btn-crear-mesa");
+            if (btnCrearMesa) {
+                btnCrearMesa.classList.remove("hidden");
+            }
+        }
+    } else {
+        console.warn("No hay usuario en sesión.");
+    }
+};
+
+window.abrirModalNuevaMesa = function() {
+    document.getElementById('modal-crear-mesa').classList.remove('hidden');
+    // Limpiar inputs
+    document.getElementById('nueva-mesa-numero').value = '';
+    document.getElementById('nueva-mesa-capacidad').value = '';
+    document.getElementById('nueva-mesa-zona').value = '';
+};
+
+window.cerrarModalNuevaMesa = function() {
+    document.getElementById('modal-crear-mesa').classList.add('hidden');
+};
+
+window.guardarNuevaMesa = async function() {
+    const numero = document.getElementById('nueva-mesa-numero').value;
+    const capacidad = document.getElementById('nueva-mesa-capacidad').value;
+    const zona = document.getElementById('nueva-mesa-zona').value;
+
+    if (!numero || !capacidad || !zona) return alert("Completa todos los campos");
+
+    try {
+        const response = await fetch(`${window.API_BASE_URL_MESAS}/crear/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ numero, capacidad, zona, estado: 'libre' })
+        });
+
+        const result = await response.json();
+
+        if (result.estado === 'exitoso') {
+            window.cerrarModalNuevaMesa();
+            // Recargamos todo para que traiga la nueva mesa desde el backend
+            window.initMesas(); 
+        } else {
+            alert("Error al crear: " + result.mensaje);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Error de conexión al crear la mesa.");
+    }
+};
+
+// Se ejecuta la validación de rol apenas cargue el script
+window.validarRolYNombre();
+
+// Se ejecuta inmediatamente cuando el archivo js es inyectado por base.html
+window.initMesas();

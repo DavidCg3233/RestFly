@@ -57,7 +57,10 @@ ROOT_URLCONF = 'configuracion.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            # Ahora busca en TODOS los módulos, no solo en caja
+            BASE_DIR / 'src/modulos',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -70,7 +73,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'configuracion.wsgi.application'
-
+    
+STATICFILES_DIRS = [
+    BASE_DIR / 'src/modulos',
+]
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases

@@ -1,18 +1,19 @@
 # Archivo: src/modulos/caja/urls.py
+
 from django.urls import path
-from .controladores import controlador_caja
-from .controladores import controlador_facturacion # Importamos el nuevo controlador
+from .controladores import controlador_caja, controlador_facturacion
 
 urlpatterns = [
-    # --- RUTAS EXISTENTES DE CONTROL DE CAJA ---
-    path('estado/', controlador_caja.estado_caja, name='estado_caja'),
-    path('abrir/', controlador_caja.abrir_caja, name='abrir_caja'),
-    path('cerrar/', controlador_caja.cerrar_caja, name='cerrar_caja'),
+
+    # ── Control de Caja ──────────────────────────────────────
+    path('panel/',      controlador_caja.vista_control_caja,   name='vista_control_caja'),
+    path('estado/',     controlador_caja.estado_caja,          name='estado_caja'),
+    path('abrir/',      controlador_caja.abrir_caja,           name='abrir_caja'),
+    path('cerrar/',     controlador_caja.cerrar_caja,          name='cerrar_caja'),
     path('movimiento/', controlador_caja.registrar_movimiento, name='movimiento_caja'),
 
-    # --- NUEVAS RUTAS DE FACTURACIÓN ---
-    #path('facturacion/pedidos-pendientes/', controlador_facturacion.obtener_pedidos_pendientes, name='facturacion_pedidos_pendientes'),
-    ##path('facturacion/procesar-pago/', controlador_facturacion.procesar_pago, name='facturacion_procesar_pago'),
-    #path('facturacion/historial-ventas/', controlador_facturacion.obtener_historial_ventas, name='facturacion_historial_ventas'),
-    #path('facturacion/', controlador_facturacion.vista_facturacion, name='vista_facturacion'),
+    # ── Facturación ──────────────────────────────────────────
+    path('facturacion/pedidos-pendientes/', controlador_facturacion.pedidos_pendientes, name='fac_pedidos_pendientes'),
+    path('facturacion/historial-ventas/',   controlador_facturacion.historial_ventas,   name='fac_historial_ventas'),
+    path('facturacion/procesar-pago/',      controlador_facturacion.procesar_pago,      name='fac_procesar_pago'),
 ]

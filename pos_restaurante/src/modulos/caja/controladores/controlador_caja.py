@@ -2,6 +2,8 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from ..servicios.servicio_caja import ServicioCaja
+from django.shortcuts import render
+
 
 @csrf_exempt
 def estado_caja(request):
@@ -70,3 +72,7 @@ def registrar_movimiento(request):
         except Exception as e:
             return JsonResponse({"estado": "error", "mensaje": str(e)}, status=500)
     return JsonResponse({"mensaje": "Método no permitido."}, status=405)
+
+
+def vista_control_caja(request):
+    return render(request, 'ControlCaja_index.html')
