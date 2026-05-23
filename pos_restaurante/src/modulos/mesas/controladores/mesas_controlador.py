@@ -60,3 +60,20 @@ class ControladorMesas:
                 return JsonResponse({'estado': 'error', 'mensaje': str(e)}, status=400)
                 
         return JsonResponse({'estado': 'error', 'mensaje': 'Método no permitido'}, status=405)
+    
+    @staticmethod
+    @csrf_exempt
+    def manejar_eliminar_mesa(request):
+        """Atrapa la petición del frontend para eliminar una mesa"""
+        if request.method == 'POST':
+            try:
+                body = json.loads(request.body)
+                print(f"📩 PAYLOAD ELIMINAR MESA: {body}")
+                ServicioMesas.eliminar_mesa(body)
+                return JsonResponse({"estado": "exitoso", "mensaje": "Mesa eliminada correctamente."})
+            except Exception as e:
+                print(f"❌ ERROR POST ELIMINAR MESA: {str(e)}")
+                # Si sale error de llave foránea, es porque la mesa tiene pedidos
+                if "foreign key constraint" in str(e).lower():
+                    return JsonResponse({"estado": "error", "mensaje": "No puedes eliminar una mesa que tiene pedidos registrados."}, status=400)
+                return JsonResponse({"estado": "error", "mensaje": str(e)}, status=400)

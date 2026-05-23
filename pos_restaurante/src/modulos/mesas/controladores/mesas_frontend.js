@@ -83,6 +83,95 @@ window.cambiarEstadoMesa = async function(nuevoEstado) {
     }
 };
 
+window.eliminarMesa = function(idMesa, event) {
+    // Evita que el clic abra la mesa
+    if (event) event.stopPropagation();
+
+    // Detectamos el modo oscuro y aplicamos TU negro exacto en oklch
+    const isDark = document.documentElement.classList.contains('dark');
+    const bgColor = isDark ? 'oklch(0.12 0 0)' : '#ffffff';
+    const textColor = isDark ? '#f8fafc' : '#0f172a';
+
+    Swal.fire({
+        title: undefined,
+        icon: undefined,
+        buttonsStyling: false,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        
+        background: bgColor,
+        color: textColor,
+
+        html: `
+            <div class="flex flex-col items-center text-center">
+                <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold mb-2">Eliminar Mesa</h2>
+                <p class="text-sm mb-6 opacity-70">Esta acción no se puede deshacer y borrará la mesa permanentemente del mapa.</p>
+            </div>
+        `,
+        
+        customClass: {
+            backdrop: 'bg-background/80 backdrop-blur-sm',
+            // ¡AQUÍ ESTÁ EL CAMBIO! Agregamos border-2 y border-orange-500
+            popup: 'p-8 rounded-2xl shadow-xl flex flex-col items-center max-w-sm border-2 border-orange-500',
+            actions: 'flex gap-3 w-full justify-center mt-0',
+            confirmButton: 'px-6 py-2.5 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-colors shadow-sm w-full',
+            cancelButton: 'px-6 py-2.5 bg-secondary font-bold rounded-lg border border-border hover:brightness-95 transition-colors shadow-sm w-full'
+        }
+
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`${window.API_BASE_URL_MESAS}/eliminar/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_mesa: idMesa })
+                });
+
+                const data = await response.json();
+
+                if (data.estado === 'exitoso') {
+                    Swal.fire({
+                        background: bgColor,
+                        color: textColor,
+                        buttonsStyling: false,
+                        html: `
+                            <div class="flex flex-col items-center text-center">
+                                <div class="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                </div>
+                                <h2 class="text-2xl font-bold mb-2">¡Eliminada!</h2>
+                                <p class="text-sm mb-6 opacity-70">La mesa ha sido borrada del mapa correctamente.</p>
+                            </div>
+                        `,
+                        customClass: {
+                            backdrop: 'bg-background/80 backdrop-blur-sm',
+                            // Y aquí le ponemos un borde verde para cuando sale todo bien
+                            popup: 'p-8 rounded-2xl shadow-xl flex flex-col items-center max-w-sm border-2 border-green-500',
+                            confirmButton: 'px-6 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:brightness-110 transition-colors shadow-sm w-full'
+                        }
+                    });
+                    
+                    if (typeof window.initMesas === 'function') {
+                        window.initMesas();
+                    }
+                } else {
+                    Swal.fire({ title: 'Error', text: data.mensaje, icon: 'error', background: bgColor, color: textColor });
+                }
+            } catch (error) {
+                console.error("Error al eliminar la mesa:", error);
+                Swal.fire({ title: 'Error de conexión', text: 'No se pudo contactar con el servidor.', icon: 'error', background: bgColor, color: textColor });
+            }
+        }
+    });
+};
 // ==========================================
 // 3. RENDERIZADO Y LÓGICA DE INTERFAZ
 // ==========================================
@@ -120,6 +209,11 @@ window.renderMesas = function() {
     if (!container) return;
     container.innerHTML = '';
 
+    // 1. Validamos si es ADMIN leyendo tu sesión para saber si mostramos la papelera
+    const usuarioString = localStorage.getItem("usuario_sesion");
+    const usuario = usuarioString ? JSON.parse(usuarioString) : null;
+    const esAdmin = usuario && usuario.rol_sistema === "ADMINISTRADOR";
+
     const filtered = state.filter === 'all' ? mesas : mesas.filter(m => m.status === state.filter);
     const zones = [...new Set(mesas.map(m => m.zone))];
 
@@ -133,6 +227,21 @@ window.renderMesas = function() {
             
             return `
                 <div onclick="abrirMesa('${mesa.id}')" class="group relative cursor-pointer p-5 rounded-2xl border-2 transition-all hover:shadow-xl active:scale-95 ${conf.bg} ${conf.border}">
+                    
+                    ${esAdmin ? `
+                        <button 
+                            onclick="window.eliminarMesa('${mesa.id}', event)" 
+                            class="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white p-2 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg z-20 w-9 h-9"
+                            title="Eliminar Mesa"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"></path>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    ` : ''}
+
                     <div class="flex justify-between items-start mb-4">
                         <span class="text-2xl font-black text-foreground">#${mesa.number}</span>
                         <div class="p-1.5 rounded-lg bg-background/50 border border-border">

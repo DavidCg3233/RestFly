@@ -103,3 +103,11 @@ class RepositorioMesas:
             """
             for item in items:
                 cursor.execute(query, [id_pedido, item['id_producto'], item['cantidad'], item['precio_unitario']])
+    
+    @staticmethod
+    def eliminar_mesa(id_mesa):
+        """Elimina una mesa por su ID en la base de datos"""
+        with connection.cursor() as cursor:
+            # Nota: Si la mesa tiene pedidos asociados, la BD podría bloquear 
+            # el borrado por seguridad (llaves foráneas). ¡Eso es bueno!
+            cursor.execute("DELETE FROM mesa WHERE id_mesa = %s", [id_mesa])

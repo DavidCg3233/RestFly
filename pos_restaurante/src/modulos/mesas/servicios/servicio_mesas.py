@@ -162,3 +162,16 @@ class ServicioMesas:
         RepositorioMesas.agregar_detalles_pedido(id_pedido, detalles_bd)
 
         return True
+    
+    @staticmethod
+    def eliminar_mesa(datos):
+        id_mesa = datos.get('id_mesa')
+        if not id_mesa:
+            raise ValueError("Falta el ID de la mesa a eliminar.")
+        
+        # Limpiamos el ID si el frontend lo manda con la 'm' (ej: 'm1' -> 1)
+        if isinstance(id_mesa, str) and id_mesa.startswith('m'):
+            id_mesa = int(id_mesa.replace('m', ''))
+            
+        RepositorioMesas.eliminar_mesa(id_mesa)
+        return True

@@ -11,4 +11,5 @@ urlpatterns = [
     # Endpoint corregido para creación de mesas
     path('api/crear/', ControladorMesas.manejar_crear_mesa, name='api_crear_mesa'),
     path('api/enviar-comanda/', ControladorMesas.manejar_enviar_comanda, name='api_enviar_comanda'),
+    path('api/eliminar/', ControladorMesas.manejar_eliminar_mesa, name='api_eliminar_mesa'),
 ]
