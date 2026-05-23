@@ -1,6 +1,6 @@
 // C:\Users\Administrador\Desktop\POS RESTAURANTE\RestFly\pos_restaurante\src\modulos\mesas\controladores\mesas_frontend.js
 
-// 1. Evitamos el error de "has already been declared" usando window o var
+// 1. Estados visuales
 window.ESTADOS = window.ESTADOS || {
     libre: { label: "Libre", bg: "bg-emerald-500/10", border: "border-emerald-500/20", dot: "bg-emerald-500", text: "text-emerald-500", icon: "check-circle" },
     ocupada: { label: "Ocupada", bg: "bg-rose-500/10", border: "border-rose-500/20", dot: "bg-rose-500", text: "text-rose-500", icon: "user" },
@@ -8,9 +8,10 @@ window.ESTADOS = window.ESTADOS || {
     limpieza: { label: "Limpieza", bg: "bg-blue-500/10", border: "border-blue-500/20", dot: "bg-blue-400", text: "text-blue-400", icon: "sparkles" },
 };
 
+// OJO: Verifica si tu URL realmente termina en /api/mesas/api o si es solo /api/mesas
 window.API_BASE_URL_MESAS = 'http://127.0.0.1:8000/api/mesas/api';
 
-// Vaciamos la memoria global (usamos var para evitar errores de redeclaración)
+// Memoria global
 var mesas = [];
 var productos = [];
 var pedidos = [];
@@ -32,17 +33,18 @@ window.initMesas = async function() {
         const result = await response.json();
 
         if (result.estado === 'exitoso') {
-            mesas = result.data.mesas;
-            productos = result.data.productos;
-            pedidos = result.data.pedidos;
-            console.log("MESAS DEL BACKEND:", mesas);
+            mesas = result.data.mesas || [];
+            productos = result.data.productos || [];
+            pedidos = result.data.pedidos || [];
+            console.log("🔥 DATOS DESDE DB:", { mesas, productos, pedidos });
+            
             renderFiltros();
             renderMesas();
         } else {
-            console.error("Error del servidor:", result.mensaje);
+            console.error("❌ Error del servidor:", result.mensaje);
         }
     } catch (error) {
-        console.error("Error de conexión al cargar mesas:", error);
+        console.error("❌ Error de conexión al cargar BD:", error);
     }
 };
 
@@ -55,9 +57,7 @@ window.cambiarEstadoMesa = async function(nuevoEstado) {
     try {
         const response = await fetch(`${window.API_BASE_URL_MESAS}/estado-mesa/`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 id_mesa: mesaActivaId,
                 estado: nuevoEstado
@@ -67,13 +67,14 @@ window.cambiarEstadoMesa = async function(nuevoEstado) {
         const result = await response.json();
 
         if (result.estado === 'exitoso') {
-            const mesa = mesas.find(m => m.id === mesaActivaId);
-            mesa.status = nuevoEstado;
-            if (nuevoEstado === 'libre') mesa.orderId = null;
-            
-            renderBotonesEstado();
-            renderMesas();
-            renderFiltros();
+            // Refrescamos todo desde la base de datos para asegurar sincronía perfecta
+            window.initMesas();
+            // Cerramos el modal si se liberó la mesa
+            if (nuevoEstado === 'libre') {
+                cerrarModalPedido();
+            } else {
+                renderBotonesEstado();
+            }
         } else {
             alert("No se pudo cambiar el estado: " + result.mensaje);
         }
@@ -84,10 +85,8 @@ window.cambiarEstadoMesa = async function(nuevoEstado) {
 };
 
 window.eliminarMesa = function(idMesa, event) {
-    // Evita que el clic abra la mesa
     if (event) event.stopPropagation();
 
-    // Detectamos el modo oscuro y aplicamos TU negro exacto en oklch
     const isDark = document.documentElement.classList.contains('dark');
     const bgColor = isDark ? 'oklch(0.12 0 0)' : '#ffffff';
     const textColor = isDark ? '#f8fafc' : '#0f172a';
@@ -99,10 +98,8 @@ window.eliminarMesa = function(idMesa, event) {
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
-        
         background: bgColor,
         color: textColor,
-
         html: `
             <div class="flex flex-col items-center text-center">
                 <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-4">
@@ -116,16 +113,13 @@ window.eliminarMesa = function(idMesa, event) {
                 <p class="text-sm mb-6 opacity-70">Esta acción no se puede deshacer y borrará la mesa permanentemente del mapa.</p>
             </div>
         `,
-        
         customClass: {
             backdrop: 'bg-background/80 backdrop-blur-sm',
-            // ¡AQUÍ ESTÁ EL CAMBIO! Agregamos border-2 y border-orange-500
             popup: 'p-8 rounded-2xl shadow-xl flex flex-col items-center max-w-sm border-2 border-orange-500',
             actions: 'flex gap-3 w-full justify-center mt-0',
             confirmButton: 'px-6 py-2.5 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-colors shadow-sm w-full',
             cancelButton: 'px-6 py-2.5 bg-secondary font-bold rounded-lg border border-border hover:brightness-95 transition-colors shadow-sm w-full'
         }
-
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
@@ -139,9 +133,7 @@ window.eliminarMesa = function(idMesa, event) {
 
                 if (data.estado === 'exitoso') {
                     Swal.fire({
-                        background: bgColor,
-                        color: textColor,
-                        buttonsStyling: false,
+                        background: bgColor, color: textColor, buttonsStyling: false,
                         html: `
                             <div class="flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4">
@@ -153,15 +145,11 @@ window.eliminarMesa = function(idMesa, event) {
                         `,
                         customClass: {
                             backdrop: 'bg-background/80 backdrop-blur-sm',
-                            // Y aquí le ponemos un borde verde para cuando sale todo bien
                             popup: 'p-8 rounded-2xl shadow-xl flex flex-col items-center max-w-sm border-2 border-green-500',
                             confirmButton: 'px-6 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:brightness-110 transition-colors shadow-sm w-full'
                         }
                     });
-                    
-                    if (typeof window.initMesas === 'function') {
-                        window.initMesas();
-                    }
+                    window.initMesas();
                 } else {
                     Swal.fire({ title: 'Error', text: data.mensaje, icon: 'error', background: bgColor, color: textColor });
                 }
@@ -172,6 +160,7 @@ window.eliminarMesa = function(idMesa, event) {
         }
     });
 };
+
 // ==========================================
 // 3. RENDERIZADO Y LÓGICA DE INTERFAZ
 // ==========================================
@@ -209,7 +198,6 @@ window.renderMesas = function() {
     if (!container) return;
     container.innerHTML = '';
 
-    // 1. Validamos si es ADMIN leyendo tu sesión para saber si mostramos la papelera
     const usuarioString = localStorage.getItem("usuario_sesion");
     const usuario = usuarioString ? JSON.parse(usuarioString) : null;
     const esAdmin = usuario && usuario.rol_sistema === "ADMINISTRADOR";
@@ -254,7 +242,7 @@ window.renderMesas = function() {
                         </div>
                         <div class="text-xs font-bold ${conf.text} uppercase tracking-tighter">${conf.label}</div>
                     </div>
-                    ${pedido ? `<div class="mt-4 pt-3 border-t border-border/20 font-mono font-bold text-primary text-sm">$${pedido.total.toFixed(2)}</div>` : ''}
+                    ${pedido ? `<div class="mt-4 pt-3 border-t border-border/20 font-mono font-bold text-primary text-sm">$${parseFloat(pedido.total).toFixed(2)}</div>` : ''}
                 </div>
             `;
         }).join('');
@@ -275,35 +263,42 @@ window.abrirMesa = function(id) {
     const mesa = mesas.find(m => m.id === id);
     state.activeMesaId = id;
     
+    // Si la mesa está libre, armamos un carrito temporal sin afectar el estado real de la BD aún.
     if (mesa.status === 'libre') {
-        const newId = 'P-' + Math.floor(1000 + Math.random() * 9000);
-        pedidos.push({ id: newId, mesero: "Admin", total: 0, items: [] });
-        mesa.status = 'ocupada';
-        mesa.orderId = newId;
-        state.activeOrderId = newId;
+        const tempId = 'TEMP-' + mesa.id;
+        if (!pedidos.find(p => p.id === tempId)) {
+            pedidos.push({ id: tempId, total: 0, items: [] });
+        }
+        state.activeOrderId = tempId;
     } else {
+        // Usamos el ID del pedido real traído de Django
         state.activeOrderId = mesa.orderId;
     }
 
     document.getElementById('modal-titulo-mesa').innerText = `Mesa #${mesa.number} — ${mesa.zone}`;
-    document.getElementById('modal-subtitulo-pedido').innerText = state.activeOrderId ? `PEDIDO: ${state.activeOrderId}` : 'SIN PEDIDO';
+    document.getElementById('modal-subtitulo-pedido').innerText = (mesa.status === 'libre') ? 'NUEVO PEDIDO' : `PEDIDO BD: #${state.activeOrderId}`;
     
     renderBotonesEstado();
     cambiarTab(state.activeTab);
     renderPedido();
     
     document.getElementById('modal-pedido').classList.remove('hidden');
-    renderMesas();
-    renderFiltros();
 };
 
 window.cerrarModalPedido = function() {
     document.getElementById('modal-pedido').classList.add('hidden');
     state.activeMesaId = null;
+    state.activeOrderId = null;
+    
+    // Limpiar carritos temporales si se cierra sin guardar
+    pedidos = pedidos.filter(p => !String(p.id).startsWith('TEMP-'));
+    renderMesas();
 };
 
 window.renderBotonesEstado = function() {
     const mesa = mesas.find(m => m.id === state.activeMesaId);
+    if (!mesa) return;
+    
     const container = document.getElementById('modal-botones-estado');
     container.innerHTML = '';
 
@@ -343,7 +338,7 @@ window.cambiarTab = function(cat) {
                 <div class="min-w-0 pr-2">
                     <h4 class="text-sm font-bold truncate">${p.name}</h4>
                     <p class="text-[10px] text-muted truncate">${p.desc}</p>
-                    <span class="text-sm font-black text-primary">$${p.price.toFixed(2)}</span>
+                    <span class="text-sm font-black text-primary">$${parseFloat(p.price).toFixed(2)}</span>
                 </div>
                 <div class="flex items-center gap-2 bg-secondary p-1 rounded-lg">
                     ${qty > 0 ? `
@@ -374,7 +369,6 @@ window.updateQty = function(prodId, delta) {
     pedido.total = pedido.items.reduce((sum, i) => sum + (i.price * i.qty), 0);
     renderPedido();
     cambiarTab(state.activeTab);
-    renderMesas();
 };
 
 window.renderPedido = function() {
@@ -391,38 +385,72 @@ window.renderPedido = function() {
         `;
         totalEl.innerText = "$0.00";
     } else {
-        container.innerHTML = pedido.items.map(i => `
-            <div class="flex items-center justify-between p-3 bg-background border border-border rounded-xl">
-                <div>
-                    <p class="text-xs font-bold">${i.name}</p>
-                    <p class="text-[10px] text-primary font-mono">$${(i.price * i.qty).toFixed(2)}</p>
+        // Diccionario de colores visuales para los estados independientes
+        const badgeColores = {
+            'pendiente': 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+            'en_preparacion': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+            'listo': 'bg-green-500/10 text-green-500 border-green-500/20',
+            'entregado': 'bg-transparent text-muted border-transparent opacity-50'
+        };
+
+        container.innerHTML = pedido.items.map(i => {
+            // Si es un ítem nuevo (aún no enviado), por defecto es pendiente.
+            // Si viene de la BD, lee i.status y i.category
+            const estadoItem = i.status || 'pendiente'; 
+            const areaItem = i.category || 'Cocina'; 
+            
+            const colores = badgeColores[estadoItem] || badgeColores['pendiente'];
+            const tachado = estadoItem === 'entregado' ? 'line-through' : '';
+
+            return `
+                <div class="flex items-center justify-between p-3 bg-background border border-border rounded-xl mb-2">
+                    <div class="flex-1 pr-2">
+                        <div class="flex items-center gap-2 mb-1">
+                            <p class="text-xs font-bold ${tachado}">${i.name}</p>
+                            <span class="text-[8px] uppercase font-black px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
+                                ${areaItem}
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-primary font-mono">$${(i.price * i.qty).toFixed(2)}</p>
+                    </div>
+                    
+                    <div class="flex flex-col items-end gap-1.5">
+                        <span class="text-[8px] uppercase font-black px-2 py-0.5 rounded border ${colores}">
+                            ${estadoItem.replace('_', ' ')}
+                        </span>
+                        <span class="text-[10px] font-black bg-secondary px-2 py-1 rounded">x${i.qty}</span>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-[10px] font-black bg-secondary px-2 py-1 rounded">x${i.qty}</span>
-                </div>
-            </div>
-        `).join('');
-        totalEl.innerText = `$${pedido.total.toFixed(2)}`;
+            `;
+        }).join('');
+        totalEl.innerText = `$${parseFloat(pedido.total).toFixed(2)}`;
     }
     if(typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-window.confirmarPedido = async function() {
-    const pedido = pedidos.find(p => p.id === state.activeOrderId);
-    if (!pedido || pedido.items.length === 0) return alert("El pedido está vacío");
-    
-    // Sacamos el ID del mesero que tomó la orden
-    const usuarioString = localStorage.getItem("usuario_sesion");
-    const usuario = usuarioString ? JSON.parse(usuarioString) : null;
-    const id_usuario = usuario ? usuario.id_usuario : 1; // Por defecto el 1 (Admin) si falla
+window.confirmarPedido = async function(event) {
+    if (event) event.preventDefault(); // Evitamos recargas raras del HTML
 
+    // 1. Buscamos el pedido actual de la mesa activa
+    const pedidoActual = pedidos.find(p => p.id === state.activeOrderId);
+    
+    if (!pedidoActual || pedidoActual.items.length === 0) {
+        return alert("⚠️ No puedes enviar una comanda vacía. Agrega productos primero.");
+    }
+
+    // 2. Extraemos el usuario en sesión (para saber qué mesero tomó el pedido)
+    const usuarioString = localStorage.getItem("usuario_sesion");
+    const usuario = usuarioString ? JSON.parse(usuarioString) : { id_usuario: 1 }; // Default a 1 por si acaso
+
+    // 3. Armamos los datos exactos que espera tu `enviar_comanda` en Python
     const payload = {
         id_mesa: state.activeMesaId,
-        id_usuario: id_usuario,
-        items: pedido.items
+        id_usuario: usuario.id_usuario,
+        items: pedidoActual.items
     };
 
     try {
+        // 4. Enviamos silenciosamente a Django
         const response = await fetch(`${window.API_BASE_URL_MESAS}/enviar-comanda/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -432,15 +460,24 @@ window.confirmarPedido = async function() {
         const result = await response.json();
 
         if (result.estado === 'exitoso') {
-            alert(`¡Comanda enviada a cocina!\nTotal: $${pedido.total.toFixed(2)}`);
-            cerrarModalPedido();
-            window.initMesas(); // Recargamos para ver la mesa roja (Ocupada)
+            Swal.fire({
+                title: '¡Comanda Enviada!',
+                text: 'El pedido ha sido enviado a cocina/bar exitosamente.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            // Recargamos el estado global para que desaparezca el "TEMP-" y tome el ID real de la base de datos
+            window.initMesas();
+            window.cerrarModalPedido();
         } else {
-            alert("Error al enviar la comanda: " + result.mensaje);
+            alert("❌ Error al guardar el pedido: " + result.mensaje);
         }
+
     } catch (error) {
-        console.error("Error al enviar pedido:", error);
-        alert("Error de conexión al enviar la comanda.");
+        console.error("Error al enviar la comanda:", error);
+        alert("⚠️ Hubo un problema de conexión al guardar el pedido.");
     }
 };
 
@@ -449,19 +486,16 @@ window.confirmarPedido = async function() {
 // ==========================================
 
 window.validarRolYNombre = function() {
-    // 1. Leemos la variable que guardaste en el login
     const usuarioString = localStorage.getItem("usuario_sesion");
 
     if (usuarioString) {
         const usuario = JSON.parse(usuarioString);
 
-        // 2. Actualizamos el nombre en la interfaz
         const spanNombre = document.getElementById("nombre-mesero");
         if (spanNombre) {
             spanNombre.innerText = usuario.nombre_completo;
         }
 
-        // 3. Validamos si el rol es el definido en tu BD para mostrar el botón
         if (usuario.rol_sistema === "ADMINISTRADOR") {
             const btnCrearMesa = document.getElementById("btn-crear-mesa");
             if (btnCrearMesa) {
@@ -475,7 +509,6 @@ window.validarRolYNombre = function() {
 
 window.abrirModalNuevaMesa = function() {
     document.getElementById('modal-crear-mesa').classList.remove('hidden');
-    // Limpiar inputs
     document.getElementById('nueva-mesa-numero').value = '';
     document.getElementById('nueva-mesa-capacidad').value = '';
     document.getElementById('nueva-mesa-zona').value = '';
@@ -503,7 +536,6 @@ window.guardarNuevaMesa = async function() {
 
         if (result.estado === 'exitoso') {
             window.cerrarModalNuevaMesa();
-            // Recargamos todo para que traiga la nueva mesa desde el backend
             window.initMesas(); 
         } else {
             alert("Error al crear: " + result.mensaje);
@@ -514,8 +546,5 @@ window.guardarNuevaMesa = async function() {
     }
 };
 
-// Se ejecuta la validación de rol apenas cargue el script
 window.validarRolYNombre();
-
-// Se ejecuta inmediatamente cuando el archivo js es inyectado por base.html
 window.initMesas();

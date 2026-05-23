@@ -8,53 +8,56 @@ var STATUS_CONFIG = {
     entregado: { label: "Entregado", bg: "bg-muted/20", border: "border-border", text: "text-muted", headerBg: "bg-muted/30", icon: "check-check" }
 };
 
+// OJO: Ajusta esta URL a la ruta real de tu API de pedidos/cocina en Django
+window.API_BASE_URL_COCINA = 'http://127.0.0.1:8000/api/cocina';
 var estadoCocina = window.estadoCocina || {
     view: "all",
     timer: null,
-    orders: [
-        {
-            id: "ord-1", tableNumber: "04", waiter: "Admin", status: "pendiente", createdAt: new Date(Date.now() - 5 * 60000),
-            items: [
-                { id: 1, name: "Hamb. Premium", quantity: 2, category: "cocina", notes: "Sin cebolla" },
-                { id: 2, name: "Coca Cola", quantity: 2, category: "bar", notes: "" }
-            ]
-        },
-        {
-            id: "ord-2", tableNumber: "12", waiter: "Admin", status: "preparando", createdAt: new Date(Date.now() - 25 * 60000),
-            items: [
-                { id: 3, name: "Tacos Al Pastor", quantity: 1, category: "cocina", notes: "Extra picante" }
-            ]
-        },
-        {
-            id: "ord-3", tableNumber: "BAR", waiter: "Admin", status: "listo", createdAt: new Date(Date.now() - 10 * 60000),
-            items: [
-                { id: 4, name: "Gin Tonic", quantity: 3, category: "bar", notes: "Con pepino" }
-            ]
-        }
-    ]
+    orders: [] // Arranca vacío, lo llenaremos con la base de datos
 };
 
 // Guardamos en window
 window.estadoCocina = estadoCocina;
 
-// 1. Inicialización
+// ==========================================
+// 1. CARGA INICIAL Y POLLING
+// ==========================================
+window.cargarPedidosCocina = async function() {
+    try {
+        const response = await fetch(`${window.API_BASE_URL_COCINA}/pedidos/`);
+        const result = await response.json();
+
+        if (result.estado === 'exitoso') {
+            estadoCocina.orders = result.data || [];
+            
+            const stats = document.getElementById('stats-container');
+            if (stats) {
+                renderStats();
+                renderFiltros();
+                renderKanban();
+            }
+        } else {
+            console.error("❌ Error del servidor al cargar cocina:", result.mensaje);
+        }
+    } catch (error) {
+        console.error("❌ Error de conexión al cargar BD cocina:", error);
+    }
+};
+
 window.initCocina = function() {
     // Limpiamos intervalos previos si existen
     if (estadoCocina.timer) clearInterval(estadoCocina.timer);
     
-    setTimeout(() => {
-        const stats = document.getElementById('stats-container');
-        if (stats) {
-            renderStats();
-            renderFiltros();
-            renderKanban();
-            
-            estadoCocina.timer = setInterval(() => renderKanban(), 60000);
-        }
-    }, 50);
+    // Carga inicial inmediata
+    cargarPedidosCocina();
+    
+    // Refresco automático cada 60 segundos
+    estadoCocina.timer = setInterval(() => cargarPedidosCocina(), 60000);
 };
 
-// 2. Renderizar Estadísticas
+// ==========================================
+// 2. RENDERIZADO DE INTERFAZ
+// ==========================================
 function renderStats() {
     const container = document.getElementById('stats-container');
     if (!container) return;
@@ -73,7 +76,6 @@ function renderStats() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// 3. Renderizar Filtros
 function renderFiltros() {
     const container = document.getElementById('filtros-container');
     if (!container) return;
@@ -97,7 +99,6 @@ window.setFiltroCocina = function(vista) {
     renderKanban();
 };
 
-// 4. Renderizar Kanban
 function renderKanban() {
     const container = document.getElementById('kanban-container');
     if (!container) return;
@@ -133,10 +134,15 @@ function renderKanban() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// 5. Generar Tarjeta
 function generarTarjetaHtml(order, config, status) {
     const currentIdx = STATUS_FLOW.indexOf(status);
-    const mins = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000);
+    
+    // Asume que order.createdAt viene del backend en un formato parseable (ej. ISO 8601)
+    const orderDate = new Date(order.createdAt);
+    // Prevención de error si la fecha es inválida
+    const msDiff = isNaN(orderDate.getTime()) ? 0 : (Date.now() - orderDate.getTime());
+    const mins = Math.floor(msDiff / 60000);
+    
     const timeColor = mins > 20 && status !== "entregado" ? "text-destructive" : "text-muted";
 
     const itemsHtml = order.items.map(item => {
@@ -151,17 +157,17 @@ function generarTarjetaHtml(order, config, status) {
     }).join('');
 
     let botonesHtml = `<div class="flex items-center gap-2 pt-2 border-t border-border/50">`;
-    if (currentIdx > 0) botonesHtml += `<button onclick="moverPedido('${order.id}', -1)" class="flex-1 py-1.5 rounded-lg bg-secondary hover:bg-border text-muted text-xs font-medium">← Atrás</button>`;
+    if (currentIdx > 0) botonesHtml += `<button onclick="moverPedido('${order.id}', -1)" class="flex-1 py-1.5 rounded-lg bg-secondary hover:bg-border text-muted text-xs font-medium transition-colors">← Atrás</button>`;
     if (currentIdx < STATUS_FLOW.length - 1) {
-        botonesHtml += `<button onclick="moverPedido('${order.id}', 1)" class="flex-1 py-1.5 rounded-lg text-xs font-semibold ${status === "listo" ? "bg-green-500/20 text-green-400" : "bg-primary/20 text-primary"}">Avanzar →</button>`;
+        botonesHtml += `<button onclick="moverPedido('${order.id}', 1)" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors hover:brightness-110 ${status === "listo" ? "bg-green-500/20 text-green-400" : "bg-primary/20 text-primary"}">Avanzar →</button>`;
     }
     botonesHtml += `</div>`;
 
     return `<div class="rounded-xl border p-4 transition-all hover:shadow-lg ${config.bg} ${config.border}">
         <div class="flex justify-between mb-3">
             <div>
-                <div class="flex items-center gap-2"><span class="font-bold">Mesa #${order.tableNumber}</span><span class="w-2 h-2 rounded-full ${config.text.replace('text-', 'bg-')}"></span></div>
-                <p class="text-muted text-xs">${order.waiter}</p>
+                <div class="flex items-center gap-2"><span class="font-bold">Mesa #${order.tableNumber || 'N/A'}</span><span class="w-2 h-2 rounded-full ${config.text.replace('text-', 'bg-')}"></span></div>
+                <p class="text-muted text-xs">${order.waiter || 'Sistema'}</p>
             </div>
             <div class="flex items-center gap-1 text-xs ${timeColor}"><i data-lucide="clock" class="w-3 h-3"></i> <span>${mins}m</span></div>
         </div>
@@ -170,14 +176,46 @@ function generarTarjetaHtml(order, config, status) {
     </div>`;
 }
 
-window.moverPedido = function(orderId, direccion) {
-    const order = estadoCocina.orders.find(o => o.id === orderId);
+// ==========================================
+// 3. ACTUALIZACIÓN HACIA EL BACKEND
+// ==========================================
+window.moverPedido = async function(orderId, direccion) {
+    const order = estadoCocina.orders.find(o => String(o.id) === String(orderId));
     if (!order) return;
+    
     const newIdx = STATUS_FLOW.indexOf(order.status) + direccion;
+    
     if (newIdx >= 0 && newIdx < STATUS_FLOW.length) {
-        order.status = STATUS_FLOW[newIdx];
-        renderStats();
-        renderKanban();
+        const nuevoEstado = STATUS_FLOW[newIdx];
+        
+        try {
+            // Actualización optimista en la interfaz para que se sienta rápido
+            order.status = nuevoEstado;
+            renderStats();
+            renderKanban();
+
+            // Petición al backend
+            const response = await fetch(`${window.API_BASE_URL_COCINA}/avanzar/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id_pedido: order.id, 
+                    estado: nuevoEstado 
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.estado !== 'exitoso') {
+                // Si falla en backend, revertimos el cambio visual y avisamos
+                alert("No se pudo actualizar el estado: " + result.mensaje);
+                cargarPedidosCocina(); // Recarga la verdad desde BD
+            }
+        } catch (error) {
+            console.error("Error de conexión al mover pedido:", error);
+            alert("Error de conexión con el servidor.");
+            cargarPedidosCocina(); // Recarga para asegurar consistencia
+        }
     }
 };
 

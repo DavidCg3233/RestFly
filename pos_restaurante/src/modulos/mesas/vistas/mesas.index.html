@@ -48,7 +48,7 @@
     </div>
 
     <div id="modal-pedido" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="absolute inset-0" onclick="cerrarModalPedido()"></div>
+        <div class="absolute inset-0" onclick="window.cerrarModalPedido()"></div>
 
         <div class="bg-card border border-border text-foreground w-full max-w-5xl max-h-[90vh] rounded-2xl flex flex-col shadow-2xl relative z-10 overflow-hidden animate-in fade-in zoom-in-95 duration-200" id="modal-contenido">
             
@@ -65,7 +65,7 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <div class="flex p-1 bg-secondary rounded-xl border border-border" id="modal-botones-estado"></div>
-                        <button onclick="cerrarModalPedido()" class="p-2 hover:bg-destructive/10 hover:text-destructive rounded-full transition-colors">
+                        <button onclick="window.cerrarModalPedido()" class="p-2 hover:bg-destructive/10 hover:text-destructive rounded-full transition-colors">
                             <i data-lucide="x" class="w-5 h-5"></i>
                         </button>
                     </div>
@@ -76,13 +76,13 @@
                 <div class="flex flex-1 overflow-hidden">
                     <div class="flex-1 flex flex-col overflow-hidden border-r border-border">
                         <div class="flex gap-2 p-4 bg-background border-b border-border overflow-x-auto">
-                            <button onclick="cambiarTab('cocina')" id="tab-cocina" class="tab-btn active px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+                            <button onclick="window.cambiarTab('cocina')" id="tab-cocina" class="tab-btn active px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
                                 <i data-lucide="chef-hat" class="w-4 h-4"></i> Cocina
                             </button>
-                            <button onclick="cambiarTab('bar')" id="tab-bar" class="tab-btn px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 text-muted hover:bg-secondary">
+                            <button onclick="window.cambiarTab('bar')" id="tab-bar" class="tab-btn px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 text-muted hover:bg-secondary">
                                 <i data-lucide="wine" class="w-4 h-4"></i> Bar
                             </button>
-                            <button onclick="cambiarTab('postre')" id="tab-postre" class="tab-btn px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 text-muted hover:bg-secondary">
+                            <button onclick="window.cambiarTab('postre')" id="tab-postre" class="tab-btn px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 text-muted hover:bg-secondary">
                                 <i data-lucide="cake-slice" class="w-4 h-4"></i> Postres
                             </button>
                         </div>
@@ -107,7 +107,7 @@
                                 <span class="text-muted text-sm">Subtotal</span>
                                 <span class="text-xl font-bold text-foreground" id="pedido-total">$0.00</span>
                             </div>
-                            <button onclick="confirmarPedido()" class="w-full bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98] font-bold py-4 rounded-xl transition-all shadow-lg shadow-primary/25">
+                            <button onclick="window.confirmarPedido(event)" class="w-full bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98] font-bold py-4 rounded-xl transition-all shadow-lg shadow-primary/25">
                                 ENVIAR A COCINA
                             </button>
                         </div>

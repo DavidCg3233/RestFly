@@ -28,4 +28,5 @@ urlpatterns = [
     # 🔥 CORREGIDO: Cambiado a plural 'usuarios/' para hacer match con el Frontend JS
     path('api/usuarios/', include('src.modulos.usuarios.urls')),
     path('api/mesas/', include('src.modulos.mesas.urls', namespace='mesas')),
+    path('api/cocina/', include('src.modulos.cocina.urls')),
 ]
