@@ -15,7 +15,7 @@
                 <input type="date" id="filtro-fecha-fin" class="w-full h-10 px-3 rounded-lg border border-[var(--borde)] bg-[var(--secundario)] text-[var(--texto)] text-sm focus:outline-none focus:border-[var(--primario)] transition-colors">
             </div>
             <div class="flex-1 flex items-end">
-                <button class="w-full flex items-center justify-center gap-2 h-10 rounded-lg font-bold text-sm bg-[var(--primario)] text-[var(--primario-texto)] hover:opacity-90 transition-opacity">
+                <button id="btn-exportar-reportes" class="w-full flex items-center justify-center gap-2 h-10 rounded-lg font-bold text-sm bg-[var(--primario)] text-[var(--primario-texto)] hover:opacity-90 transition-opacity">
                     <i data-lucide="download" class="w-4 h-4"></i> Exportar
                 </button>
             </div>
@@ -58,6 +58,16 @@
             <h3 class="text-sm font-bold text-[var(--tarjeta-texto)] mb-4" id="titulo-grafica">Ventas por Día</h3>
             <div class="w-full h-[350px] relative">
                 <canvas id="grafica-principal"></canvas>
+            </div>
+        </div>
+        
+        <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300 overflow-hidden">
+            <h3 class="text-sm font-bold text-[var(--tarjeta-texto)] mb-4" id="titulo-tabla">Detalle de Registros</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse" id="tabla-datos-reportes">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
 

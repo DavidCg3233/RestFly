@@ -29,4 +29,5 @@ urlpatterns = [
     path('api/usuarios/', include('src.modulos.usuarios.urls')),
     path('api/mesas/', include('src.modulos.mesas.urls', namespace='mesas')),
     path('api/cocina/', include('src.modulos.cocina.urls')),
+    path('api/reportes/', include('src.modulos.reportes.urls')),
 ]
