@@ -37,16 +37,24 @@ document.addEventListener("DOMContentLoaded", () => {
             const datos = await respuesta.json();
 
             if (respuesta.ok) {
+                // Guardamos la sesión en el localStorage
                 localStorage.setItem("usuario_sesion", JSON.stringify(datos.usuario));
                 
-                const rol = datos.usuario.rol_sistema;
+                // Normalizamos el rol a mayúsculas para la validación
+                const rol = datos.usuario.rol_sistema ? datos.usuario.rol_sistema.toUpperCase().trim() : "";
                 
-                if (rol === "ADMINISTRADOR") {
+                // Lista de todos los roles permitidos en tu matriz de permisos
+                const rolesValidos = ["ADMINISTRADOR", "GERENTE", "CAJERO", "MESERO", "INVENTARIADOR", "OPERARIO"];
+                
+                if (rolesValidos.includes(rol)) {
+                    // ¡TODOS los roles válidos van al cascarón principal!
+                    // Desde ahí, base.html sabrá qué mostrarles y qué ocultarles.
                     window.location.href = "../../../compartido/vistas/base.html";
-                } else if (rol === "CAJERO") {
-                    window.location.href = "../../caja/vistas/index.html";
                 } else {
-                    window.location.href = "../../../compartido/vistas/error_rol.html";
+                    // Si el backend responde con un rol extraño o vacío
+                    alert("Acceso denegado: El rol asignado no es reconocido por el sistema.");
+                    localStorage.removeItem("usuario_sesion");
+                    window.location.reload();
                 }
             } else {
                 mensajeError.classList.remove("hidden");

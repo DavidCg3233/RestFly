@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RestFly - Panel Principal</title>
     
+    <link rel="icon" type="image/png" href="../utilidades/img/Restfly_sencillo.png">
+    
     <link rel="stylesheet" href="../utilidades/estilos.css">
     <script src="../seguridad/verificar_sesion.js"></script>
     
@@ -53,42 +55,42 @@
         <nav class="flex-1 p-4 flex flex-col gap-2 overflow-y-auto">
             <p class="text-[10px] font-bold text-muted uppercase tracking-wider px-3 mb-1">Módulos Principales</p>
             
-            <button onclick="cargarModulo('../../modulos/tablero/vistas/contenido_tablero.html', 'Tablero General')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+            <button data-modulo="Dashboard" onclick="cargarModulo('../../modulos/tablero/vistas/contenido_tablero.html', 'Tablero General')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Tablero</span>
             </button>
 
-            <button onclick="cargarModulo('../../modulos/usuarios/vistas/index.html', 'Gestión de Usuarios')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+            <button data-modulo="Usuarios" onclick="cargarModulo('../../modulos/usuarios/vistas/index.html', 'Gestión de Usuarios')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="users" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Usuarios</span>
             </button>
 
-            <button onclick="cargarModulo('../../modulos/mesas/vistas/mesas.index.html', 'Mesas y Pedidos', '../../modulos/mesas/controladores/mesas_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+            <button data-modulo="Mesas" onclick="cargarModulo('../../modulos/mesas/vistas/mesas.index.html', 'Mesas y Pedidos', '../../modulos/mesas/controladores/mesas_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="map" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Mesas & Pedidos</span>
             </button>
 
-            <button onclick="cargarModulo('../../modulos/cocina/vistas/cocina.index.html', 'Comandas Cocina/Bar', '../../modulos/cocina/controladores/cocina_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+            <button data-modulo="Cocina" onclick="cargarModulo('../../modulos/cocina/vistas/cocina.index.html', 'Comandas Cocina/Bar', '../../modulos/cocina/controladores/cocina_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="chef-hat" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Cocina & Bar</span>
             </button>       
 
-            <button onclick="cargarModulo('../../modulos/inventario/vistas/inventario.index.html', 'Inventario', '../../modulos/inventario/controladores/inventario_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+            <button data-modulo="Inventario" onclick="cargarModulo('../../modulos/inventario/vistas/inventario.index.html', 'Inventario', '../../modulos/inventario/controladores/inventario_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="package" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Inventario</span>
             </button>
 
-            <button onclick="cargarModulo('../../modulos/caja/vistas/facturacion.index.html', 'Caja y Facturación')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+            <button data-modulo="Facturacion" onclick="cargarModulo('../../modulos/caja/vistas/facturacion.index.html', 'Caja y Facturación')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="receipt" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Facturación</span>
             </button>
 
-            <button onclick="cargarModulo('../../modulos/caja/vistas/ControlCaja_index.html', 'Control de Caja', '../../modulos/caja/controladores/ControlCaja_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+            <button data-modulo="ControlCaja" onclick="cargarModulo('../../modulos/caja/vistas/ControlCaja_index.html', 'Control de Caja', '../../modulos/caja/controladores/ControlCaja_frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="wallet" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Control de Caja</span>
             </button>
 
-            <button onclick="cargarModulo('../../modulos/reportes/vistas/reportes.index.html', 'Reportes', '../../modulos/reportes/controladores/reportes.frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
+            <button data-modulo="Reportes" onclick="cargarModulo('../../modulos/reportes/vistas/reportes.index.html', 'Reportes', '../../modulos/reportes/controladores/reportes.frontend.js')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all text-muted hover:bg-secondary hover:text-foreground border border-transparent focus:bg-primary/10 focus:text-primary focus:border-primary/20">
                 <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
                 <span class="flex-1 text-left">Reportes</span>
             </button>
@@ -200,27 +202,22 @@
             window.location.replace("../../modulos/login/vistas/index.html"); 
         }
 
-        // 5. Carga Dinámica de Módulos (Corregida e Inteligente)
+        // 5. Carga Dinámica de Módulos
         async function cargarModulo(rutaHtml, tituloModulo, rutaJs = null) {
             const contenedor = document.getElementById('contenedor-principal');
             const tituloEl = document.getElementById('titulo-modulo');
             
             try {
-                // Actualizar el título en el header
                 if (tituloEl && tituloModulo) {
                     tituloEl.textContent = tituloModulo;
                 }
 
-                // 1. Cargamos la vista HTML
                 const respuesta = await fetch(rutaHtml);
                 if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status} - No se encontró: ${rutaHtml}`);
                 const html = await respuesta.text();
                 
-                // 2. Inyectamos el HTML
                 contenedor.innerHTML = html;
 
-                // Si hay scripts dentro del HTML que se inyectó, forzamos su ejecución
-                // (Por si alguno de tus otros módulos todavía tiene etiquetas <script> adentro)
                 const scripts = contenedor.querySelectorAll('script');
                 scripts.forEach(script => {
                     const nuevoScript = document.createElement('script');
@@ -229,7 +226,6 @@
                     script.parentNode.replaceChild(nuevoScript, script);
                 });
 
-                // 3. Cargamos el Controlador JS externo (si se pasó por parámetro)
                 if (rutaJs) {
                     const viejoScript = document.getElementById('script-modulo-activo');
                     if (viejoScript) viejoScript.remove();
@@ -240,7 +236,6 @@
                     document.body.appendChild(nuevoScript);
                 }
 
-                // Re-inicializar iconos para el contenido nuevo
                 if (typeof lucide !== 'undefined') lucide.createIcons();
 
             } catch (error) {
@@ -255,11 +250,72 @@
             }
         }
 
-        // Cargar por defecto
-        document.addEventListener('DOMContentLoaded', () => {
-            cargarModulo('../../modulos/tablero/vistas/contenido_tablero.html', 'Tablero General');
-        });
+        // 6. FUNCIÓN DE PERMISOS: Asegurada con mapeos completos para la barra lateral
+        function aplicarPermisos(rolUsuario) {
+            console.log("--- DIAGNÓSTICO DE RESTFLY ---");
+            console.log("1. Rol recibido del localStorage:", rolUsuario);
 
+            const rolLimpio = rolUsuario ? rolUsuario.trim().toLowerCase() : "";
+            console.log("2. Rol transformado para la matriz:", rolLimpio);
+
+            const matrizPermisos = {
+                "administrador": ["Dashboard", "Usuarios", "Mesas", "Cocina", "Inventario", "Facturacion", "ControlCaja", "Reportes"],
+                "gerente":       ["Dashboard", "Mesas", "Cocina", "Inventario", "Facturacion", "ControlCaja", "Reportes"],
+                "cajero":        ["Mesas", "Facturacion", "ControlCaja", "Reportes"],
+                "mesero":        ["Mesas"],
+                "inventariador": ["Inventario"],
+                "operario":      ["Cocina"] 
+            };
+
+            const modulosPermitidos = matrizPermisos[rolLimpio] || [];
+            console.log("3. Módulos que este usuario tiene permitidos ver:", modulosPermitidos);
+
+            const botonesMenu = document.querySelectorAll("[data-modulo]");
+            console.log("4. Total de botones con 'data-modulo' encontrados en el HTML:", botonesMenu.length);
+
+            botonesMenu.forEach(boton => {
+                const moduloBoton = boton.getAttribute("data-modulo");
+                
+                if (!modulosPermitidos.includes(moduloBoton)) {
+                    boton.classList.add("hidden");
+                    boton.classList.remove("flex");
+                } else {
+                    boton.classList.remove("hidden");
+                    boton.classList.add("flex");
+                }
+            });
+            console.log("-------------------------------");
+        }
+
+        // 7. Cargar por defecto e Inicializar Permisos al arrancar
+        document.addEventListener('DOMContentLoaded', () => {
+            const sesion = localStorage.getItem("usuario_sesion");
+            
+            if (sesion) {
+                try {
+                    const usuario = JSON.parse(sesion);
+                    const rol = usuario.rol_sistema;
+                    
+                    // 1. Filtrar barra lateral inmediatamente
+                    aplicarPermisos(rol);
+
+                    const rolLimpio = rol ? rol.trim().toLowerCase() : "";
+
+                    // 2. Redirección inteligente del home según el rol
+                    if (rolLimpio === "cajero" || rolLimpio === "mesero") {
+                        cargarModulo('../../modulos/mesas/vistas/mesas.index.html', 'Mesas y Pedidos', '../../modulos/mesas/controladores/mesas_frontend.js');
+                    } else if (rolLimpio === "inventariador") {
+                        cargarModulo('../../modulos/inventario/vistas/inventario.index.html', 'Inventario', '../../modulos/inventario/controladores/inventario_frontend.js');
+                    } else if (rolLimpio === "operario") {
+                        cargarModulo('../../modulos/cocina/vistas/cocina.index.html', 'Comandas Cocina/Bar', '../../modulos/cocina/controladores/cocina_frontend.js');
+                    } else {
+                        cargarModulo('../../modulos/tablero/vistas/contenido_tablero.html', 'Tablero General');
+                    }
+                } catch (error) {
+                    console.error("Error al inicializar permisos en el Dashboard:", error);
+                }
+            }
+        });
     </script>
     <script src="../../modulos/reportes/controladores/Reportes_frontend.js"></script>
 </body>
