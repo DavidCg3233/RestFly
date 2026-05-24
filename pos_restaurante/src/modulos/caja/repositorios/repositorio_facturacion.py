@@ -110,11 +110,15 @@ class RepositorioFacturacion:
 
             ventas = []
             for id_venta, numero_mesa, mesero, metodo, total, fecha in cursor.fetchall():
+                
+                # Traducir el método de pago al formato que espera el Frontend
+                metodo_limpio = "tarjeta" if metodo == "tarjeta_debito" else metodo
+
                 ventas.append({
                     "id":            f"VTA-{id_venta:04d}",
                     "tableNumber":   str(numero_mesa),
                     "waiter":        mesero,
-                    "paymentMethod": metodo,
+                    "paymentMethod": metodo_limpio,
                     "total":         float(total),
                     "completedAt":   fecha.isoformat() if fecha else None
                 })

@@ -256,9 +256,19 @@
     };
 
     window.abrirModalCierre = () => {
-        document.getElementById("cierre-espered").id ? document.getElementById("cierre-esperado").textContent = `$${window.estadoCaja.efectivoEsperadoCache.toFixed(2)}` : null;
+        // 1. Buscamos el elemento correctamente sin el typo
+        const spanEsperado = document.getElementById("cierre-esperado");
+        
+        // 2. Validamos de forma segura. Si existe, le ponemos el texto.
+        if (spanEsperado) {
+            spanEsperado.textContent = `$${window.estadoCaja.efectivoEsperadoCache.toFixed(2)}`;
+        }
+
+        // 3. Limpiamos el resto del modal
         document.getElementById("cierre-real").value = "";
         document.getElementById("cierre-diferencia-container").classList.add("hidden");
+        
+        // 4. Abrimos el modal
         window.toggleModal("modal-cierre", true);
     };
     window.cerrarModalCierre = () => window.toggleModal("modal-cierre", false);
