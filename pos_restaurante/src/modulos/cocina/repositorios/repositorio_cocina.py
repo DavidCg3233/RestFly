@@ -1,5 +1,3 @@
-# C:\Users\Administrador\Desktop\POS RESTAURANTE\RestFly\pos_restaurante\src\modulos\cocina\repositorios\repositorio_cocina.py
-
 class RepositorioCocina:
     def __init__(self, db_connection):
         self.db = db_connection
@@ -49,19 +47,15 @@ class RepositorioCocina:
             cursor.execute(query, (nuevo_estado_id, id_pedido, nombre_area))
             return cursor.rowcount
 
+    # 🔥 AHORA SÍ ESTÁ DENTRO DE LA CLASE 🔥
     def actualizar_estado_pedido(self, id_pedido, nuevo_estado_id):
         with self.db.cursor() as cursor:
+            # SÓLO actualizamos el estado en cocina (detalle_pedido)
             query = """
                 UPDATE detalle_pedido 
                 SET id_estado_detalle = %s
                 WHERE id_pedido = %s
             """
             cursor.execute(query, (nuevo_estado_id, id_pedido))
-            
-            query_pedido = """
-                UPDATE pedido
-                SET id_estado_pedido = %s
-                WHERE id_pedido = %s
-            """
-            cursor.execute(query_pedido, (nuevo_estado_id, id_pedido))
+                        
             return cursor.rowcount

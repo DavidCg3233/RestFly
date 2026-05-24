@@ -20,7 +20,7 @@ class ServicioCocina:
             id_pedido = row['id_pedido']
             
             # Buscamos el estado general. Si la BD no trae estado general del pedido, usamos el del detalle.
-            estado_bd = row.get('nombre_estado_pedido', row.get('nombre_estado_detalle', 'pendiente'))
+            estado_bd = row.get('nombre_estado_detalle', 'pendiente')
             estado_js = mapa_estados_js.get(estado_bd.lower(), 'pendiente')
             
             if id_pedido not in pedidos_dict:

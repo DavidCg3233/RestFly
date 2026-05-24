@@ -13,6 +13,7 @@ class ControladorInventario:
                 data = ServicioInventario.listar_insumos()
                 return JsonResponse({"estado": "exitoso", "data": data})
             except Exception as e:
+                print(f"❌ ERROR GET INSUMOS: {str(e)}")
                 return JsonResponse({"estado": "error", "mensaje": str(e)}, status=500)
 
         elif request.method == 'POST':

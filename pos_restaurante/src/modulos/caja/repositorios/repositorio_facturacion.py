@@ -5,14 +5,14 @@ from django.db import connection
 
 class RepositorioFacturacion:
 
-    # =========================================================
+   # =========================================================
     # PEDIDOS PENDIENTES DE COBRO
     # =========================================================
 
     @staticmethod
     def obtener_pedidos_pendientes():
         """
-        Trae pedidos en estado 'enviado' o 'abierto' que aún no tienen venta asociada.
+        Trae pedidos que aún no tienen venta asociada y que no han sido cancelados.
         """
         with connection.cursor() as cursor:
             cursor.execute("""
@@ -26,8 +26,9 @@ class RepositorioFacturacion:
                 INNER JOIN usuario u  ON p.id_usuario     = u.id_usuario
                 INNER JOIN estado_pedido ep ON p.id_estado_pedido = ep.id_estado_pedido
                 LEFT  JOIN venta   v  ON p.id_pedido      = v.id_pedido
-                WHERE ep.nombre_estado_pedido IN ('enviado', 'abierto')
-                  AND v.id_venta IS NULL
+                -- 🔥 EL FIX DEFINITIVO: Lógica inversa 🔥
+                WHERE v.id_venta IS NULL 
+                    AND ep.nombre_estado_pedido NOT IN ('cancelado', 'pagado')
                 ORDER BY p.fecha_pedido ASC
             """)
             pedidos_raw = cursor.fetchall()
