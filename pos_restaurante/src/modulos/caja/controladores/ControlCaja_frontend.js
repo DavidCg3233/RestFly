@@ -1,50 +1,60 @@
 (function() {
-    // Definimos las funciones auxiliares primero
+    // URL base de tus endpoints en Django (Ajusta la ruta según tus urls.py)
+    const API_URL = 'http://127.0.0.1:8000/api/caja'; 
+
+    // ID del usuario temporalmente quemado hasta que uses tu sistema de sesiones/tokens
+    const ID_USUARIO_LOGUEADO = 1; 
+
+    // Estado inicial limpio (Sin ventas falsas)
     window.inicializarEstadoVacio = function() {
         window.estadoCaja = {
             isOpen: false,
             sesion: null,
-            ventas: [
-                { id: "v1", metodo: "efectivo", total: 45.50 },
-                { id: "v2", metodo: "tarjeta", total: 120.00 },
-                { id: "v3", metodo: "efectivo", total: 32.00 },
-                { id: "v4", metodo: "transferencia", total: 85.00 }
-            ],
+            ventas: [],
             movimientos: [],
             formMovTipo: "entrada",
             efectivoEsperadoCache: 0
         };
     };
 
-    window.guardarEstadoEnStorage = function() {
-        localStorage.setItem('restfly_estado_caja', JSON.stringify(window.estadoCaja));
-    };
-
-    // --- PERSISTENCIA Y RECUPERACIÓN DEL ESTADO ---
-    // Al estar dentro de esta función, usar 'const' o 'let' ya no causa conflicto al recargar
-    const estadoGuardado = localStorage.getItem('restfly_estado_caja');
-
-    if (estadoGuardado) {
+    // --- CONEXIÓN CON EL BACKEND (REEMPLAZA LOCALSTORAGE) ---
+    
+    // 1. Obtener el estado real desde Django
+    window.cargarEstadoDesdeServidor = async function() {
         try {
-            window.estadoCaja = JSON.parse(estadoGuardado);
+            const respuesta = await fetch(`${API_URL}/estado/`); // Llama a def estado_caja
+            const resultado = await respuesta.json();
             
-            // Re-convertir los strings de fechas a objetos Date de JavaScript
-            if (window.estadoCaja.sesion && window.estadoCaja.sesion.abiertaEn) {
-                window.estadoCaja.sesion.abiertaEn = new Date(window.estadoCaja.sesion.abiertaEn);
+            if (resultado.estado === "exitoso") {
+                window.estadoCaja = {
+                    isOpen: resultado.data.isOpen,
+                    sesion: resultado.data.sesion,
+                    ventas: resultado.data.ventas,
+                    movimientos: resultado.data.movimientos,
+                    formMovTipo: "entrada",
+                    efectivoEsperadoCache: 0
+                };
+
+                // Parsear fechas de string a objeto Date
+                if (window.estadoCaja.sesion && window.estadoCaja.sesion.abiertaEn) {
+                    window.estadoCaja.sesion.abiertaEn = new Date(window.estadoCaja.sesion.abiertaEn);
+                }
+                window.estadoCaja.movimientos.forEach(mov => {
+                    mov.fecha = new Date(mov.fecha);
+                });
+
+            } else {
+                window.inicializarEstadoVacio();
             }
-            window.estadoCaja.movimientos.forEach(mov => {
-                mov.fecha = new Date(mov.fecha);
-            });
-        } catch (e) {
-            console.error("Error al leer el estado de caja guardado, restableciendo...", e);
+        } catch (error) {
+            console.error("Error al conectar con el servidor:", error);
             window.inicializarEstadoVacio();
         }
-    } else {
-        window.inicializarEstadoVacio();
-    }
+        window.renderMainView();
+    };
 
     window.initControlCaja = function() {
-        window.renderMainView();
+        window.cargarEstadoDesdeServidor();
     };
 
     window.renderMainView = function() {
@@ -80,6 +90,7 @@
             return m.tipo === "entrada" ? acc + m.monto : acc - m.monto;
         }, 0);
 
+        // El backend ya procesa montos iniciales limpios
         const esperado = window.estadoCaja.sesion.montoInicial + totalVentas + totalMovs;
         window.estadoCaja.efectivoEsperadoCache = esperado;
 
@@ -97,6 +108,89 @@
         window.renderResumenMetodos();
     };
 
+    // 2. Procesar Apertura en el Servidor
+    window.procesarApertura = async function() {
+        const val = parseFloat(document.getElementById("apertura-monto").value);
+        if (isNaN(val) || val < 0) return alert("Ingresa un monto válido");
+
+        try {
+            const respuesta = await fetch(`${API_URL}/abrir/`, { // Llama a def abrir_caja
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    monto_inicial: val,
+                    id_usuario: ID_USUARIO_LOGUEADO
+                })
+            });
+            const resultado = await respuesta.json();
+
+            if (resultado.estado === "exitoso") {
+                window.cerrarModalApertura();
+                await window.cargarEstadoDesdeServidor(); // Recargamos la info fresca del servidor
+            } else {
+                alert("Error: " + resultado.mensaje);
+            }
+        } catch (error) {
+            alert("No se pudo conectar con el servidor para abrir caja.");
+        }
+    };
+
+    // 3. Procesar Cierre en el Servidor
+    window.procesarCierre = async function() {
+        const real = document.getElementById("cierre-real").value;
+        if (real === "") return alert("Ingresa el efectivo contado");
+
+        try {
+            const respuesta = await fetch(`${API_URL}/cerrar/`, { // Llama a def cerrar_caja
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ efectivo_real: parseFloat(real) })
+            });
+            const resultado = await respuesta.json();
+
+            if (resultado.estado === "exitoso") {
+                window.cerrarModalCierre();
+                await window.cargarEstadoDesdeServidor();
+            } else {
+                alert("Error: " + resultado.mensaje);
+            }
+        } catch (error) {
+            alert("No se pudo registrar el cierre.");
+        }
+    };
+
+    // 4. Procesar Movimientos Manuales en el Servidor
+    window.procesarMovimiento = async function() {
+        const monto = parseFloat(document.getElementById("mov-monto").value);
+        const desc = document.getElementById("mov-desc").value.trim();
+
+        if (isNaN(monto) || monto <= 0) return alert("Ingresa un monto válido mayor a 0");
+        if (!desc) return alert("Agrega una descripción");
+
+        try {
+            const respuesta = await fetch(`${API_URL}/movimiento/`, { // Llama a def registrar_movimiento
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tipo: window.estadoCaja.formMovTipo,
+                    monto: monto,
+                    desc: desc
+                })
+            });
+            const resultado = await respuesta.json();
+
+            if (resultado.estado === "exitoso") {
+                window.cerrarModalMov();
+                await window.cargarEstadoDesdeServidor();
+            } else {
+                alert("Error: " + resultado.mensaje);
+            }
+        } catch (error) {
+            alert("No se pudo guardar el movimiento.");
+        }
+    };
+
+    // --- RENDERIZADO DE LISTAS ---
     window.renderListaMovimientos = function() {
         const listContainer = document.getElementById("lista-movimientos");
         document.getElementById("movimientos-count").textContent = `${window.estadoCaja.movimientos.length} movimiento(s)`;
@@ -135,7 +229,7 @@
         const methods = ["efectivo", "tarjeta", "transferencia"];
 
         listContainer.innerHTML = methods.map(method => {
-            const sales = window.estadoCaja.ventas.filter(v => v.metodo === method);
+            const sales = window.estadoCaja.ventas.filter(v => v.metodo.toLowerCase() === method);
             const total = sales.reduce((acc, v) => acc + v.total, 0);
             const count = sales.length;
 
@@ -161,25 +255,8 @@
         window.toggleModal("modal-apertura", false);
     };
 
-    window.procesarApertura = () => {
-        const val = parseFloat(document.getElementById("apertura-monto").value);
-        if (isNaN(val) || val < 0) return alert("Ingresa un monto válido");
-
-        window.estadoCaja.isOpen = true;
-        window.estadoCaja.sesion = {
-            id: `ses-${Date.now()}`,
-            abiertaEn: new Date(),
-            montoInicial: val
-        };
-        window.estadoCaja.movimientos = []; 
-        
-        window.guardarEstadoEnStorage();
-        window.cerrarModalApertura();
-        window.renderMainView();
-    };
-
     window.abrirModalCierre = () => {
-        document.getElementById("cierre-esperado").textContent = `$${window.estadoCaja.efectivoEsperadoCache.toFixed(2)}`;
+        document.getElementById("cierre-espered").id ? document.getElementById("cierre-esperado").textContent = `$${window.estadoCaja.efectivoEsperadoCache.toFixed(2)}` : null;
         document.getElementById("cierre-real").value = "";
         document.getElementById("cierre-diferencia-container").classList.add("hidden");
         window.toggleModal("modal-cierre", true);
@@ -211,18 +288,6 @@
         }
     };
 
-    window.procesarCierre = () => {
-        const real = document.getElementById("cierre-real").value;
-        if (real === "") return alert("Ingresa el efectivo contado");
-
-        window.estadoCaja.isOpen = false;
-        window.estadoCaja.sesion = null;
-        
-        localStorage.removeItem('restfly_estado_caja');
-        window.cerrarModalCierre();
-        window.renderMainView();
-    };
-
     window.abrirModalMov = () => {
         window.seleccionarTipoMov('entrada');
         document.getElementById("mov-monto").value = "";
@@ -248,26 +313,6 @@
         }
     };
 
-    window.procesarMovimiento = () => {
-        const monto = parseFloat(document.getElementById("mov-monto").value);
-        const desc = document.getElementById("mov-desc").value.trim();
-
-        if (isNaN(monto) || monto <= 0) return alert("Ingresa un monto válido mayor a 0");
-        if (!desc) return alert("Agrega una descripción");
-
-        window.estadoCaja.movimientos.unshift({
-            id: `mov-${Date.now()}`,
-            tipo: window.estadoCaja.formMovTipo,
-            monto: monto,
-            desc: desc,
-            fecha: new Date()
-        });
-
-        window.guardarEstadoEnStorage();
-        window.cerrarModalMov();
-        window.actualizarDatosCaja();
-    };
-
     window.toggleModal = function(id, show) {
         const modal = document.getElementById(id);
         if (!modal) return;
@@ -280,7 +325,6 @@
         }
     };
 
-    // Asegurar ejecución limpia
     setTimeout(() => {
         window.initControlCaja();
     }, 50);

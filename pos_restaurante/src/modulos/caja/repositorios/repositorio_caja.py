@@ -5,16 +5,17 @@ class RepositorioCaja:
     
     @staticmethod
     def obtener_caja_abierta():
-        """Retorna la sesión de caja actualmente abierta, si existe."""
-        return Caja.objects.filter(estado_caja='abierta').first()
+        """Retorna la sesión de caja actualmente abierta, si existe (case-insensitive)."""
+        # Usamos __iexact por si en la BD se guardó 'Abierta' o 'ABIERTA'
+        return Caja.objects.filter(estado_caja__iexact='abierta').first()
 
     @staticmethod
     def crear_caja(monto_inicial, id_usuario):
-        """Abre una nueva caja."""
+        """Abre una nueva caja asegurando enteros limpian en las FK."""
         caja = Caja(
             monto_inicial=monto_inicial,
             estado_caja='abierta',
-            id_usuario_id=id_usuario,
+            id_usuario_id=int(id_usuario),  # Forzamos a entero para que MySQL no proteste
             fecha_apertura=timezone.now()
         )
         caja.save()

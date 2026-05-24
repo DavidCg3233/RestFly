@@ -12,7 +12,7 @@ class ServicioCaja:
         # Obtener y formatear ventas
         ventas_db = RepositorioCaja.obtener_ventas(caja_actual.id_caja)
         ventas_formato = [{
-            "id": f"v{v.id_venta}",
+            "id": v.id_venta,  # <--- ID Entero puro, sin letras "v"
             "metodo": v.id_metodo_pago.nombre_metodo_pago,
             "total": float(v.total_venta)
         } for v in ventas_db]
@@ -20,8 +20,8 @@ class ServicioCaja:
         # Obtener y formatear movimientos
         movimientos_db = RepositorioCaja.obtener_movimientos(caja_actual.id_caja)
         movimientos_formato = [{
-            "id": f"mov-{m.id_movimiento}",
-            "tipo": "entrada" if m.id_tipo_movimiento.nombre_tipo_movimiento == 'ingreso' else "salida",
+            "id": m.id_movimiento, # <--- ID Entero puro
+            "tipo": "entrada" if m.id_tipo_movimiento.nombre_tipo_movimiento.lower() == 'ingreso' else "salida",
             "monto": float(m.monto),
             "desc": m.descripcion,
             "fecha": m.fecha_movimiento.isoformat()
@@ -30,7 +30,8 @@ class ServicioCaja:
         return {
             "isOpen": True,
             "sesion": {
-                "id": f"ses-{caja_actual.id_caja}",
+                "id": caja_actual.id_caja,  # <--- ¡CRÍTICO! Retorna el INT puro (ej: 1) no "ses-1"
+                "estado_caja": caja_actual.estado_caja,
                 "abiertaEn": caja_actual.fecha_apertura.isoformat(),
                 "montoInicial": float(caja_actual.monto_inicial)
             },
