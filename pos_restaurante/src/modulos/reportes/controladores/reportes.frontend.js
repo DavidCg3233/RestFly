@@ -17,7 +17,7 @@ window.iniciarReportesRestFly = function() {
     document.getElementById('filtro-fecha-inicio').value = haceUnMes.toISOString().split('T')[0];
     document.getElementById('filtro-fecha-fin').value = hoy.toISOString().split('T')[0];
 
-    // Event Listeners
+    // Event Listeners para cambios de filtros
     document.getElementById('filtro-fecha-inicio').addEventListener('change', window.actualizarDatosReportes);
     document.getElementById('filtro-fecha-fin').addEventListener('change', window.actualizarDatosReportes);
     
@@ -50,24 +50,82 @@ window.cambiarTabReportes = function(tabName) {
 };
 
 window.actualizarDatosReportes = function() {
-    // 1. Actualizar Tarjetas (Dummy Data)
-    const totalVentas = Math.floor(Math.random() * 5000) + 1000;
-    const transacciones = Math.floor(Math.random() * 150) + 20;
-    const promedio = totalVentas / transacciones;
-    const totalGastos = Math.floor(Math.random() * 2000) + 100;
-    const utilidad = totalVentas - totalGastos;
-
-    document.getElementById('card-total-ventas').innerText = `$${totalVentas.toFixed(2)}`;
-    document.getElementById('card-tx-count').innerText = `${transacciones} transacciones`;
-    document.getElementById('card-promedio').innerText = `$${promedio.toFixed(2)}`;
-    document.getElementById('card-total-gastos').innerText = `$${totalGastos.toFixed(2)}`;
-    document.getElementById('card-gastos-count').innerText = `${Math.floor(Math.random() * 10) + 1} registros`;
+    const contenedorTarjetas = document.getElementById('contenedor-tarjetas-resumen');
     
-    const divUtilidad = document.getElementById('card-utilidad');
-    divUtilidad.innerText = `$${utilidad.toFixed(2)}`;
-    divUtilidad.className = `text-3xl font-black ${utilidad >= 0 ? 'text-[#10b981]' : 'text-[var(--peligro)]'}`; 
+    // 1. Manejo dinámico de las Tarjetas de Resumen según el módulo
+    if (window.tabActual === 'inventario' || window.tabActual === 'productos') {
+        // En Inventario y Productos se ocultan por completo
+        if (contenedorTarjetas) contenedorTarjetas.style.display = 'none';
+    } else {
+        // Asegurar que se vuelvan a mostrar en Ventas y Gastos
+        if (contenedorTarjetas) contenedorTarjetas.style.display = 'grid';
+        
+        if (window.tabActual === 'ventas') {
+            // Generar datos aleatorios de ventas para simulación
+            const totalVentas = Math.floor(Math.random() * 5000) + 1000;
+            const transacciones = Math.floor(Math.random() * 150) + 20;
+            const promedio = totalVentas / transacciones;
+            const totalGastos = Math.floor(Math.random() * 2000) + 100;
+            const utilidad = totalVentas - totalGastos;
+            
+            // Layout responsivo de 4 columnas
+            if (contenedorTarjetas) {
+                contenedorTarjetas.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4";
+                contenedorTarjetas.innerHTML = `
+                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
+                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Ventas</p>
+                        <p class="text-3xl font-black text-[var(--primario)]">$${totalVentas.toFixed(2)}</p>
+                        <p class="text-xs text-[var(--texto-apagado)] mt-2">${transacciones} transacciones</p>
+                    </div>
+                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
+                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Promedio</p>
+                        <p class="text-3xl font-black text-[var(--primario)]">$${promedio.toFixed(2)}</p>
+                        <p class="text-xs text-[var(--texto-apagado)] mt-2">Por transacción</p>
+                    </div>
+                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
+                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Gastos</p>
+                        <p class="text-3xl font-black text-[var(--peligro)]">$${totalGastos.toFixed(2)}</p>
+                        <p class="text-xs text-[var(--texto-apagado)] mt-2">${Math.floor(Math.random() * 10) + 1} registros</p>
+                    </div>
+                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
+                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Utilidad Neta</p>
+                        <p class="text-3xl font-black ${utilidad >= 0 ? 'text-[#10b981]' : 'text-[var(--peligro)]'}">$${utilidad.toFixed(2)}</p>
+                        <p class="text-xs text-[var(--texto-apagado)] mt-2">Ventas - Gastos</p>
+                    </div>
+                `;
+            }
+        } else if (window.tabActual === 'gastos') {
+            // Generar datos aleatorios de gastos para simulación
+            const totalGastos = Math.floor(Math.random() * 2000) + 100;
+            const registrosGastos = Math.floor(Math.random() * 10) + 1;
+            const promedioGasto = totalGastos / registrosGastos;
+            const porcentajeVentas = (Math.random() * 25).toFixed(1); // Simulación de % sobre ventas
+            
+            // Layout responsivo de 3 columnas para que queden simétricas
+            if (contenedorTarjetas) {
+                contenedorTarjetas.className = "grid grid-cols-1 md:grid-cols-3 gap-4";
+                contenedorTarjetas.innerHTML = `
+                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
+                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Gastos</p>
+                        <p class="text-3xl font-black text-[var(--peligro)]">$${totalGastos.toFixed(2)}</p>
+                        <p class="text-xs text-[var(--texto-apagado)] mt-2">${registrosGastos} registros</p>
+                    </div>
+                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
+                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Promedio</p>
+                        <p class="text-3xl font-black text-[var(--peligro)]">$${promedioGasto.toFixed(2)}</p>
+                        <p class="text-xs text-[var(--texto-apagado)] mt-2">Por registro de gasto</p>
+                    </div>
+                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
+                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">% de Ventas</p>
+                        <p class="text-3xl font-black text-[var(--tarjeta-texto)]">${porcentajeVentas}%</p>
+                        <p class="text-xs text-[var(--texto-apagado)] mt-2">Relación sobre ingresos</p>
+                    </div>
+                `;
+            }
+        }
+    }
 
-    // 2. Actualizar Gráfica
+    // 2. Renderizar Gráfica
     window.dibujarGraficaPrincipal();
 
     // 3. Renderizar Tabla según el tab actual
@@ -84,7 +142,6 @@ window.renderizarTabla = function(tabName) {
     let encabezados = [];
     let filasHTML = '';
     
-    // Generar estructura según el módulo
     if (tabName === 'ventas') {
         encabezados = ['Fecha', 'Ticket', 'Cliente', 'Método Pago', 'Total'];
         for(let i=1; i<=5; i++) {
@@ -135,7 +192,6 @@ window.renderizarTabla = function(tabName) {
         }
     }
 
-    // Dibujar los encabezados
     let theadHTML = '<tr class="border-b-2 border-[var(--borde)] text-xs uppercase text-[var(--texto-apagado)]">';
     encabezados.forEach(enc => {
         theadHTML += `<th class="py-3 px-4 font-bold">${enc}</th>`;
@@ -207,13 +263,11 @@ window.dibujarGraficaPrincipal = function() {
     });
 };
 
-// Función nativa para exportar la tabla a Excel (formato CSV)
 window.exportarAExcel = function() {
     const tabla = document.getElementById('tabla-datos-reportes');
     if (!tabla) return;
     
     let csv = [];
-    // Leer todas las filas de la tabla
     const filas = tabla.querySelectorAll('tr');
     
     for (let i = 0; i < filas.length; i++) {
@@ -221,14 +275,12 @@ window.exportarAExcel = function() {
         const columnas = filas[i].querySelectorAll('td, th');
         
         for (let j = 0; j < columnas.length; j++) {
-            // Limpiamos el texto y lo ponemos entre comillas para evitar problemas con comas
             let texto = columnas[j].innerText.replace(/"/g, '""').trim();
             filaData.push(`"${texto}"`);
         }
         csv.push(filaData.join(','));
     }
     
-    // Crear el archivo Blob y descargarlo
     const csvFile = new Blob(["\uFEFF" + csv.join('\n')], {type: 'text/csv;charset=utf-8;'});
     const url = window.URL.createObjectURL(csvFile);
     

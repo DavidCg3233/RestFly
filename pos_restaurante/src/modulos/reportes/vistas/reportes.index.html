@@ -31,27 +31,7 @@
 
     <div id="vista-activa-reportes" class="flex flex-col gap-6 animate-in fade-in duration-300">
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Ventas</p>
-                <p class="text-3xl font-black text-[var(--primario)]" id="card-total-ventas">$0.00</p>
-                <p class="text-xs text-[var(--texto-apagado)] mt-2" id="card-tx-count">0 transacciones</p>
-            </div>
-            <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Promedio</p>
-                <p class="text-3xl font-black text-[var(--primario)]" id="card-promedio">$0.00</p>
-                <p class="text-xs text-[var(--texto-apagado)] mt-2">Por transacción</p>
-            </div>
-            <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Gastos</p>
-                <p class="text-3xl font-black text-[var(--peligro)]" id="card-total-gastos">$0.00</p>
-                <p class="text-xs text-[var(--texto-apagado)] mt-2" id="card-gastos-count">0 registros</p>
-            </div>
-            <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Utilidad Neta</p>
-                <p class="text-3xl font-black text-[var(--tarjeta-texto)]" id="card-utilidad">$0.00</p>
-                <p class="text-xs text-[var(--texto-apagado)] mt-2">Ventas - Gastos</p>
-            </div>
+        <div id="contenedor-tarjetas-resumen" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         </div>
 
         <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
