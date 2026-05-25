@@ -1,17 +1,19 @@
 // =========================================================
-// CONFIGURACIÓN GLOBAL
+// CONFIGURACIÓN GLOBAL - BLINDADA CONTRA RE-INYECCIÓN
 // =========================================================
-const URL_API_REPORTES = 'http://localhost:8000/api/reportes';
+if (typeof window.URL_API_REPORTES === 'undefined') {
+    window.URL_API_REPORTES = 'http://localhost:8000/api/reportes';
+}
 
 window.miGraficaReportes = null;
 window.tabActual = 'ventas';
 
 // =========================================================
-// 1. CONEXIÓN AL BACKEND (FETCH) - LOS 4 MÓDULOS REALES
+// 1. CONEXIÓN AL BACKEND (FETCH)
 // =========================================================
 async function obtenerVentasDesdeBackend(inicio = '', fin = '') {
     try {
-        let url = `${URL_API_REPORTES}/ventas-diarias/`;
+        let url = `${window.URL_API_REPORTES}/ventas-diarias/`;
         if (inicio && fin) url += `?inicio=${inicio}&fin=${fin}`;
         const respuesta = await fetch(url);
         if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
@@ -25,7 +27,7 @@ async function obtenerVentasDesdeBackend(inicio = '', fin = '') {
 
 async function obtenerProductosTopDesdeBackend(limite = 10) {
     try {
-        const respuesta = await fetch(`${URL_API_REPORTES}/productos-top/?limite=${limite}`);
+        const respuesta = await fetch(`${window.URL_API_REPORTES}/productos-top/?limite=${limite}`);
         if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
         const json = await respuesta.json();
         return json.estado === 'exitoso' ? json.data : [];
@@ -37,7 +39,7 @@ async function obtenerProductosTopDesdeBackend(limite = 10) {
 
 async function obtenerInventarioDesdeBackend() {
     try {
-        const respuesta = await fetch(`${URL_API_REPORTES}/inventario-estado/`);
+        const respuesta = await fetch(`${window.URL_API_REPORTES}/inventario-estado/`);
         if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
         const json = await respuesta.json();
         return json.estado === 'exitoso' ? json.data : [];
@@ -49,7 +51,7 @@ async function obtenerInventarioDesdeBackend() {
 
 async function obtenerGastosDesdeBackend(inicio = '', fin = '') {
     try {
-        let url = `${URL_API_REPORTES}/gastos/`;
+        let url = `${window.URL_API_REPORTES}/gastos/`;
         if (inicio && fin) url += `?inicio=${inicio}&fin=${fin}`;
         const respuesta = await fetch(url);
         if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
@@ -64,7 +66,6 @@ async function obtenerGastosDesdeBackend(inicio = '', fin = '') {
 // =========================================================
 // 2. LÓGICA DE INICIALIZACIÓN Y VISTAS
 // =========================================================
-
 window.iniciarReportesRestFly = function() {
     const contenedor = document.getElementById('modulo-reportes-contenedor');
     if (!contenedor) {
@@ -78,16 +79,21 @@ window.iniciarReportesRestFly = function() {
     const haceUnMes = new Date();
     haceUnMes.setMonth(hoy.getMonth() - 1);
     
-    document.getElementById('filtro-fecha-inicio').value = haceUnMes.toISOString().split('T')[0];
-    document.getElementById('filtro-fecha-fin').value = hoy.toISOString().split('T')[0];
+    const inputInicio = document.getElementById('filtro-fecha-inicio');
+    const inputFin = document.getElementById('filtro-fecha-fin');
 
-    document.getElementById('filtro-fecha-inicio').addEventListener('change', window.actualizarDatosReportes);
-    document.getElementById('filtro-fecha-fin').addEventListener('change', window.actualizarDatosReportes);
+    if (inputInicio && inputFin) {
+        inputInicio.value = haceUnMes.toISOString().split('T')[0];
+        inputFin.value = hoy.toISOString().split('T')[0];
+
+        inputInicio.removeEventListener('change', window.actualizarDatosReportes);
+        inputFin.removeEventListener('change', window.actualizarDatosReportes);
+        inputInicio.addEventListener('change', window.actualizarDatosReportes);
+        inputFin.addEventListener('change', window.actualizarDatosReportes);
+    }
     
-    const btnExportar = document.getElementById('btn-exportar-reportes');
-    if(btnExportar) btnExportar.addEventListener('click', window.exportarAExcel);
-
-    window.actualizarDatosReportes();
+    // 🔥 SOLUCIÓN BUG 1: Forzamos el click virtual en "ventas" para que cargue la UI completa
+    window.cambiarTabReportes('ventas');
 };
 
 window.cambiarTabReportes = function(tabName) {
@@ -105,19 +111,24 @@ window.cambiarTabReportes = function(tabName) {
     const btnActivo = document.getElementById(`tab-${tabName}`);
     if(btnActivo) btnActivo.className = claseActiva;
 
-    document.getElementById('titulo-grafica').innerText = `Rendimiento de ${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`;
+    const tituloGrafica = document.getElementById('titulo-grafica');
+    if(tituloGrafica) {
+        tituloGrafica.innerText = `Rendimiento de ${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`;
+    }
     
     window.actualizarDatosReportes();
 };
 
 window.actualizarDatosReportes = async function() {
     const contenedorTarjetas = document.getElementById('contenedor-tarjetas-resumen');
-    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
-    const fechaFin = document.getElementById('filtro-fecha-fin').value;
+    const inputInicio = document.getElementById('filtro-fecha-inicio');
+    const inputFin = document.getElementById('filtro-fecha-fin');
+    
+    const fechaInicio = inputInicio ? inputInicio.value : '';
+    const fechaFin = inputFin ? inputFin.value : '';
     
     let datosExtra = null;
 
-    // 1. Ocultar tarjetas en Inventario y Productos
     if (contenedorTarjetas) {
         contenedorTarjetas.innerHTML = ''; 
         if (window.tabActual === 'inventario' || window.tabActual === 'productos') {
@@ -127,7 +138,6 @@ window.actualizarDatosReportes = async function() {
         }
     }
 
-    // 2. Traer datos reales del Backend dependiendo de la pestaña
     if (window.tabActual === 'productos') {
         datosExtra = await obtenerProductosTopDesdeBackend(10);
     } else if (window.tabActual === 'ventas') {
@@ -138,12 +148,10 @@ window.actualizarDatosReportes = async function() {
         datosExtra = await obtenerGastosDesdeBackend(fechaInicio, fechaFin);
     }
 
-    // 3. (OPCIONAL) Inyectar resumen en las tarjetas basado en datosExtra si es Ventas o Gastos
-    // Nota: Por ahora dejo una estructura vacía o calculada simple para que no salgan fijos.
     if (contenedorTarjetas && datosExtra && datosExtra.length > 0) {
         if (window.tabActual === 'ventas') {
-            let totalDineros = datosExtra.reduce((sum, item) => sum + parseFloat(item.total), 0);
-            let totalTransacciones = datosExtra.reduce((sum, item) => sum + parseInt(item.transacciones), 0);
+            let totalDineros = datosExtra.reduce((sum, item) => sum + parseFloat(item.total || 0), 0);
+            let totalTransacciones = datosExtra.reduce((sum, item) => sum + parseInt(item.transacciones || 0), 0);
             
             contenedorTarjetas.className = "grid grid-cols-1 md:grid-cols-2 gap-4";
             contenedorTarjetas.innerHTML = `
@@ -157,7 +165,7 @@ window.actualizarDatosReportes = async function() {
                 </div>
             `;
         } else if (window.tabActual === 'gastos') {
-            let totalEgresos = datosExtra.reduce((sum, item) => sum + parseFloat(item.monto), 0);
+            let totalEgresos = datosExtra.reduce((sum, item) => sum + parseFloat(item.monto || 0), 0);
             
             contenedorTarjetas.className = "grid grid-cols-1 gap-4";
             contenedorTarjetas.innerHTML = `
@@ -169,7 +177,6 @@ window.actualizarDatosReportes = async function() {
         }
     }
 
-    // 4. Renderizar Gráfica y Tabla pasándole los DATOS REALES
     window.dibujarGraficaPrincipal(datosExtra, window.tabActual);
     window.renderizarTabla(window.tabActual, datosExtra);
 };
@@ -279,7 +286,6 @@ window.dibujarGraficaPrincipal = function(datosReales = null, tipo = '') {
     let colorLinea = primarioCSS;
 
     if (!datosReales || datosReales.length === 0) {
-        // Si no hay datos, gráfica vacía
         etiquetas = ['Sin Datos'];
         datosGrafica = [0];
     } else {
@@ -295,7 +301,7 @@ window.dibujarGraficaPrincipal = function(datosReales = null, tipo = '') {
             etiquetas = datosReales.map(item => item.fecha);
             datosGrafica = datosReales.map(item => parseFloat(item.monto));
             colorLinea = colorPeligro.startsWith('oklch') ? colorPeligro : `oklch(${colorPeligro})`;
-            colorFondo = 'rgba(239, 68, 68, 0.1)'; // Rojo suave
+            colorFondo = 'rgba(239, 68, 68, 0.1)';
         } else if (tipo === 'inventario') {
             tipoGrafica = 'bar';
             etiquetas = datosReales.map(item => item.nombre_producto);
@@ -334,31 +340,41 @@ window.dibujarGraficaPrincipal = function(datosReales = null, tipo = '') {
     });
 };
 
-window.exportarAExcel = function() {
-    const tabla = document.getElementById('tabla-datos-reportes');
-    if (!tabla) return;
+// =========================================================
+// 3. 🔥 SOLUCIÓN BUG 2: EXPORTACIÓN EXCEL DEFINITIVA
+// =========================================================
+window.descargarExcelBackend = function() {
+    const inputInicio = document.getElementById('filtro-fecha-inicio');
+    const inputFin = document.getElementById('filtro-fecha-fin');
+    const fechaInicio = inputInicio ? inputInicio.value : '';
+    const fechaFin = inputFin ? inputFin.value : '';
     
-    let csv = [];
-    const filas = tabla.querySelectorAll('tr');
+    const seccionActiva = window.tabActual || 'ventas';
+    console.log(`🚀 Solicitando Excel a Django: Sección [${seccionActiva}] | Rango: ${fechaInicio} a ${fechaFin}`);
     
-    for (let i = 0; i < filas.length; i++) {
-        let filaData = [];
-        const columnas = filas[i].querySelectorAll('td, th');
-        for (let j = 0; j < columnas.length; j++) {
-            let texto = columnas[j].innerText.replace(/"/g, '""').trim();
-            filaData.push(`"${texto}"`);
-        }
-        csv.push(filaData.join(','));
-    }
-    
-    const csvFile = new Blob(["\uFEFF" + csv.join('\n')], {type: 'text/csv;charset=utf-8;'});
-    const url = window.URL.createObjectURL(csvFile);
-    const enlaceDescarga = document.createElement('a');
-    enlaceDescarga.download = `Reporte_${window.tabActual}_${new Date().toISOString().split('T')[0]}.csv`;
-    enlaceDescarga.href = url;
-    enlaceDescarga.style.display = 'none';
-    document.body.appendChild(enlaceDescarga);
-    enlaceDescarga.click();
-    document.body.removeChild(enlaceDescarga);
-    window.URL.revokeObjectURL(url);
+    const urlDescarga = `${window.URL_API_REPORTES}/exportar-excel/?tipo=${seccionActiva}&inicio=${fechaInicio}&fin=${fechaFin}`;
+    window.location.href = urlDescarga;
 };
+
+// Por si tu botón HTML tiene un onclick="exportarAExcel()"
+window.exportarAExcel = function(e) {
+    if(e) e.preventDefault();
+    window.descargarExcelBackend();
+};
+
+// Por si tu botón HTML solo tiene el id="btnExportarExcel" (Delegación de eventos global)
+document.addEventListener('click', function(e) {
+    const btnExcel = e.target.closest('#btnExportarExcel');
+    if (btnExcel) {
+        e.preventDefault();
+        window.descargarExcelBackend();
+    }
+
+
+});
+
+setTimeout(() => {
+    if (typeof window.iniciarReportesRestFly === 'function') {
+        window.iniciarReportesRestFly();
+    }
+}, 150);

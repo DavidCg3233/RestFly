@@ -85,25 +85,41 @@
         });
         document.getElementById("caja-info-apertura").textContent = `Sesión iniciada: ${fechaFormat}`;
 
+        // 1. Total de ventas general (para mostrar en la tarjeta de estadísticas)
         const totalVentas = window.estadoCaja.ventas.reduce((acc, v) => acc + v.total, 0);
-        const totalMovs = window.estadoCaja.movimientos.reduce((acc, m) => {
+        
+        // 2. Ventas SOLO en efectivo (para que cuadre la plata física)
+        const ventasEnEfectivo = window.estadoCaja.ventas
+            .filter(v => v.metodo.toLowerCase() === 'efectivo')
+            .reduce((acc, v) => acc + v.total, 0);
+
+        // 🔥 3. EL PARCHE: Filtramos para calcular solo los movimientos manuales
+        // Excluimos cualquier movimiento que tenga la palabra "venta" en su descripción
+        const movimientosManuales = window.estadoCaja.movimientos.filter(
+            m => !m.desc.toLowerCase().includes('venta')
+        );
+
+        const totalMovsManuales = movimientosManuales.reduce((acc, m) => {
             return m.tipo === "entrada" ? acc + m.monto : acc - m.monto;
         }, 0);
 
-        // El backend ya procesa montos iniciales limpios
-        const esperado = window.estadoCaja.sesion.montoInicial + totalVentas + totalMovs;
+        // 4. Matemática final limpia (Inicial + Ventas Físicas + Movimientos Manuales)
+        const esperado = window.estadoCaja.sesion.montoInicial + ventasEnEfectivo + totalMovsManuales;
         window.estadoCaja.efectivoEsperadoCache = esperado;
 
+        // --- ACTUALIZACIÓN DEL HTML ---
         document.getElementById("stat-inicial").textContent = `$${window.estadoCaja.sesion.montoInicial.toFixed(2)}`;
         document.getElementById("stat-ventas").textContent = `$${totalVentas.toFixed(2)}`;
         
         const movEl = document.getElementById("stat-movimientos");
-        movEl.textContent = `$${totalMovs.toFixed(2)}`;
-        movEl.className = `text-2xl font-black ${totalMovs >= 0 ? 'text-[var(--tarjeta-texto)]' : 'text-[var(--peligro)]'}`;
+        // Mostramos solo el total de movimientos manuales para no confundir al usuario
+        movEl.textContent = `$${totalMovsManuales.toFixed(2)}`;
+        movEl.className = `text-2xl font-black ${totalMovsManuales >= 0 ? 'text-[var(--tarjeta-texto)]' : 'text-[var(--peligro)]'}`;
         
         document.getElementById("stat-esperado").textContent = `$${esperado.toFixed(2)}`;
         document.getElementById("resumen-total-ventas").textContent = `$${totalVentas.toFixed(2)}`;
 
+        // Renderizamos las listas (Aquí seguirán apareciendo las ventas en el historial visual)
         window.renderListaMovimientos();
         window.renderResumenMetodos();
     };
