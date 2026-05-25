@@ -1,7 +1,10 @@
 from django.urls import path
-from src.modulos.reportes.controladores.controlador_reporte import obtener_datos_reportes
+from .controladores import controlador_reporte
 
 urlpatterns = [
-    # Ruta base para obtener las estadísticas filtradas por fecha
-    path('', obtener_datos_reportes, name='obtener_datos_reportes'),
+    # GET /api/reportes/ventas-diarias/?inicio=YYYY-MM-DD&fin=YYYY-MM-DD
+    path('ventas-diarias/', controlador_reporte.obtener_ventas_diarias, name='reporte_ventas_diarias'),
+    
+    # GET /api/reportes/productos-top/
+    path('productos-top/', controlador_reporte.obtener_productos_top, name='reporte_productos_top'),
 ]

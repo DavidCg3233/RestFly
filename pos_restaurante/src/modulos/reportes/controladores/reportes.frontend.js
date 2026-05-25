@@ -1,5 +1,69 @@
+// =========================================================
+// CONFIGURACIÓN GLOBAL
+// =========================================================
+const URL_API_REPORTES = 'http://localhost:8000/api/reportes';
+
 window.miGraficaReportes = null;
-window.tabActual = 'ventas'; // Controla la pestaña activa
+window.tabActual = 'ventas';
+
+// =========================================================
+// 1. CONEXIÓN AL BACKEND (FETCH) - LOS 4 MÓDULOS REALES
+// =========================================================
+async function obtenerVentasDesdeBackend(inicio = '', fin = '') {
+    try {
+        let url = `${URL_API_REPORTES}/ventas-diarias/`;
+        if (inicio && fin) url += `?inicio=${inicio}&fin=${fin}`;
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
+        const json = await respuesta.json();
+        return json.estado === 'exitoso' ? json.data : null;
+    } catch (error) {
+        console.error("🔥 Error al traer ventas:", error);
+        return null;
+    }
+}
+
+async function obtenerProductosTopDesdeBackend(limite = 10) {
+    try {
+        const respuesta = await fetch(`${URL_API_REPORTES}/productos-top/?limite=${limite}`);
+        if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
+        const json = await respuesta.json();
+        return json.estado === 'exitoso' ? json.data : [];
+    } catch (error) {
+        console.error("🔥 Error al traer productos top:", error);
+        return [];
+    }
+}
+
+async function obtenerInventarioDesdeBackend() {
+    try {
+        const respuesta = await fetch(`${URL_API_REPORTES}/inventario-estado/`);
+        if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
+        const json = await respuesta.json();
+        return json.estado === 'exitoso' ? json.data : [];
+    } catch (error) {
+        console.error("🔥 Error al traer inventario:", error);
+        return [];
+    }
+}
+
+async function obtenerGastosDesdeBackend(inicio = '', fin = '') {
+    try {
+        let url = `${URL_API_REPORTES}/gastos/`;
+        if (inicio && fin) url += `?inicio=${inicio}&fin=${fin}`;
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
+        const json = await respuesta.json();
+        return json.estado === 'exitoso' ? json.data : [];
+    } catch (error) {
+        console.error("🔥 Error al traer gastos:", error);
+        return [];
+    }
+}
+
+// =========================================================
+// 2. LÓGICA DE INICIALIZACIÓN Y VISTAS
+// =========================================================
 
 window.iniciarReportesRestFly = function() {
     const contenedor = document.getElementById('modulo-reportes-contenedor');
@@ -17,14 +81,11 @@ window.iniciarReportesRestFly = function() {
     document.getElementById('filtro-fecha-inicio').value = haceUnMes.toISOString().split('T')[0];
     document.getElementById('filtro-fecha-fin').value = hoy.toISOString().split('T')[0];
 
-    // Event Listeners para cambios de filtros
     document.getElementById('filtro-fecha-inicio').addEventListener('change', window.actualizarDatosReportes);
     document.getElementById('filtro-fecha-fin').addEventListener('change', window.actualizarDatosReportes);
     
     const btnExportar = document.getElementById('btn-exportar-reportes');
-    if(btnExportar) {
-        btnExportar.addEventListener('click', window.exportarAExcel);
-    }
+    if(btnExportar) btnExportar.addEventListener('click', window.exportarAExcel);
 
     window.actualizarDatosReportes();
 };
@@ -49,90 +110,71 @@ window.cambiarTabReportes = function(tabName) {
     window.actualizarDatosReportes();
 };
 
-window.actualizarDatosReportes = function() {
+window.actualizarDatosReportes = async function() {
     const contenedorTarjetas = document.getElementById('contenedor-tarjetas-resumen');
+    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
+    const fechaFin = document.getElementById('filtro-fecha-fin').value;
     
-    // 1. Manejo dinámico de las Tarjetas de Resumen según el módulo
-    if (window.tabActual === 'inventario' || window.tabActual === 'productos') {
-        // En Inventario y Productos se ocultan por completo
-        if (contenedorTarjetas) contenedorTarjetas.style.display = 'none';
-    } else {
-        // Asegurar que se vuelvan a mostrar en Ventas y Gastos
-        if (contenedorTarjetas) contenedorTarjetas.style.display = 'grid';
-        
-        if (window.tabActual === 'ventas') {
-            // Generar datos aleatorios de ventas para simulación
-            const totalVentas = Math.floor(Math.random() * 5000) + 1000;
-            const transacciones = Math.floor(Math.random() * 150) + 20;
-            const promedio = totalVentas / transacciones;
-            const totalGastos = Math.floor(Math.random() * 2000) + 100;
-            const utilidad = totalVentas - totalGastos;
-            
-            // Layout responsivo de 4 columnas
-            if (contenedorTarjetas) {
-                contenedorTarjetas.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4";
-                contenedorTarjetas.innerHTML = `
-                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Ventas</p>
-                        <p class="text-3xl font-black text-[var(--primario)]">$${totalVentas.toFixed(2)}</p>
-                        <p class="text-xs text-[var(--texto-apagado)] mt-2">${transacciones} transacciones</p>
-                    </div>
-                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Promedio</p>
-                        <p class="text-3xl font-black text-[var(--primario)]">$${promedio.toFixed(2)}</p>
-                        <p class="text-xs text-[var(--texto-apagado)] mt-2">Por transacción</p>
-                    </div>
-                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Gastos</p>
-                        <p class="text-3xl font-black text-[var(--peligro)]">$${totalGastos.toFixed(2)}</p>
-                        <p class="text-xs text-[var(--texto-apagado)] mt-2">${Math.floor(Math.random() * 10) + 1} registros</p>
-                    </div>
-                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Utilidad Neta</p>
-                        <p class="text-3xl font-black ${utilidad >= 0 ? 'text-[#10b981]' : 'text-[var(--peligro)]'}">$${utilidad.toFixed(2)}</p>
-                        <p class="text-xs text-[var(--texto-apagado)] mt-2">Ventas - Gastos</p>
-                    </div>
-                `;
-            }
-        } else if (window.tabActual === 'gastos') {
-            // Generar datos aleatorios de gastos para simulación
-            const totalGastos = Math.floor(Math.random() * 2000) + 100;
-            const registrosGastos = Math.floor(Math.random() * 10) + 1;
-            const promedioGasto = totalGastos / registrosGastos;
-            const porcentajeVentas = (Math.random() * 25).toFixed(1); // Simulación de % sobre ventas
-            
-            // Layout responsivo de 3 columnas para que queden simétricas
-            if (contenedorTarjetas) {
-                contenedorTarjetas.className = "grid grid-cols-1 md:grid-cols-3 gap-4";
-                contenedorTarjetas.innerHTML = `
-                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Gastos</p>
-                        <p class="text-3xl font-black text-[var(--peligro)]">$${totalGastos.toFixed(2)}</p>
-                        <p class="text-xs text-[var(--texto-apagado)] mt-2">${registrosGastos} registros</p>
-                    </div>
-                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Promedio</p>
-                        <p class="text-3xl font-black text-[var(--peligro)]">$${promedioGasto.toFixed(2)}</p>
-                        <p class="text-xs text-[var(--texto-apagado)] mt-2">Por registro de gasto</p>
-                    </div>
-                    <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5 transition-colors duration-300">
-                        <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">% de Ventas</p>
-                        <p class="text-3xl font-black text-[var(--tarjeta-texto)]">${porcentajeVentas}%</p>
-                        <p class="text-xs text-[var(--texto-apagado)] mt-2">Relación sobre ingresos</p>
-                    </div>
-                `;
-            }
+    let datosExtra = null;
+
+    // 1. Ocultar tarjetas en Inventario y Productos
+    if (contenedorTarjetas) {
+        contenedorTarjetas.innerHTML = ''; 
+        if (window.tabActual === 'inventario' || window.tabActual === 'productos') {
+            contenedorTarjetas.style.display = 'none';
+        } else {
+            contenedorTarjetas.style.display = 'grid';
         }
     }
 
-    // 2. Renderizar Gráfica
-    window.dibujarGraficaPrincipal();
+    // 2. Traer datos reales del Backend dependiendo de la pestaña
+    if (window.tabActual === 'productos') {
+        datosExtra = await obtenerProductosTopDesdeBackend(10);
+    } else if (window.tabActual === 'ventas') {
+        datosExtra = await obtenerVentasDesdeBackend(fechaInicio, fechaFin);
+    } else if (window.tabActual === 'inventario') {
+        datosExtra = await obtenerInventarioDesdeBackend();
+    } else if (window.tabActual === 'gastos') {
+        datosExtra = await obtenerGastosDesdeBackend(fechaInicio, fechaFin);
+    }
 
-    // 3. Renderizar Tabla según el tab actual
-    window.renderizarTabla(window.tabActual);
+    // 3. (OPCIONAL) Inyectar resumen en las tarjetas basado en datosExtra si es Ventas o Gastos
+    // Nota: Por ahora dejo una estructura vacía o calculada simple para que no salgan fijos.
+    if (contenedorTarjetas && datosExtra && datosExtra.length > 0) {
+        if (window.tabActual === 'ventas') {
+            let totalDineros = datosExtra.reduce((sum, item) => sum + parseFloat(item.total), 0);
+            let totalTransacciones = datosExtra.reduce((sum, item) => sum + parseInt(item.transacciones), 0);
+            
+            contenedorTarjetas.className = "grid grid-cols-1 md:grid-cols-2 gap-4";
+            contenedorTarjetas.innerHTML = `
+                <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5">
+                    <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Ingresos</p>
+                    <p class="text-3xl font-black text-[var(--primario)]">$${totalDineros.toLocaleString('es-CO')}</p>
+                </div>
+                <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5">
+                    <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Transacciones</p>
+                    <p class="text-3xl font-black text-[var(--texto)]">${totalTransacciones}</p>
+                </div>
+            `;
+        } else if (window.tabActual === 'gastos') {
+            let totalEgresos = datosExtra.reduce((sum, item) => sum + parseFloat(item.monto), 0);
+            
+            contenedorTarjetas.className = "grid grid-cols-1 gap-4";
+            contenedorTarjetas.innerHTML = `
+                <div class="bg-[var(--tarjeta)] border border-[var(--borde)] rounded-xl p-5">
+                    <p class="text-xs font-bold text-[var(--texto-apagado)] mb-2">Total Gastos (Periodo)</p>
+                    <p class="text-3xl font-black text-[var(--peligro)]">$${totalEgresos.toLocaleString('es-CO')}</p>
+                </div>
+            `;
+        }
+    }
+
+    // 4. Renderizar Gráfica y Tabla pasándole los DATOS REALES
+    window.dibujarGraficaPrincipal(datosExtra, window.tabActual);
+    window.renderizarTabla(window.tabActual, datosExtra);
 };
 
-window.renderizarTabla = function(tabName) {
+window.renderizarTabla = function(tabName, datosReales = null) {
     const tabla = document.getElementById('tabla-datos-reportes');
     if (!tabla) return;
     
@@ -142,54 +184,60 @@ window.renderizarTabla = function(tabName) {
     let encabezados = [];
     let filasHTML = '';
     
+    if (!datosReales || datosReales.length === 0) {
+        thead.innerHTML = '';
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-[var(--texto-apagado)]">No hay datos registrados en este periodo o el backend no está conectado.</td></tr>`;
+        return;
+    }
+
     if (tabName === 'ventas') {
-        encabezados = ['Fecha', 'Ticket', 'Cliente', 'Método Pago', 'Total'];
-        for(let i=1; i<=5; i++) {
+        encabezados = ['Fecha', 'Transacciones', 'Total Día'];
+        datosReales.forEach((dia) => {
             filasHTML += `<tr class="border-b border-[var(--borde)] text-sm text-[var(--texto)]">
-                <td class="py-3 px-4">2026-05-${10+i}</td>
-                <td class="py-3 px-4">#TK-00${i}</td>
-                <td class="py-3 px-4">Cliente Mostrador</td>
-                <td class="py-3 px-4">Efectivo</td>
-                <td class="py-3 px-4 font-bold text-[var(--primario)]">$${(Math.random() * 100).toFixed(2)}</td>
+                <td class="py-3 px-4">${dia.fecha}</td>
+                <td class="py-3 px-4">${dia.transacciones}</td>
+                <td class="py-3 px-4 font-bold text-[var(--primario)]">$${parseFloat(dia.total).toLocaleString('es-CO')}</td>
             </tr>`;
-        }
+        });
+        
+    } else if (tabName === 'productos') {
+        encabezados = ['Ranking', 'Platillo/Producto', 'Cantidad Vendida', 'Ingresos Generados'];
+        datosReales.forEach((prod, index) => {
+            filasHTML += `<tr class="border-b border-[var(--borde)] text-sm text-[var(--texto)]">
+                <td class="py-3 px-4">#${index + 1}</td>
+                <td class="py-3 px-4 font-bold">${prod.producto}</td>
+                <td class="py-3 px-4">${prod.cantidad_vendida} unidades</td>
+                <td class="py-3 px-4 font-bold text-[#10b981]">$${parseFloat(prod.ingresos).toLocaleString('es-CO')}</td>
+            </tr>`;
+        });
+        
     } else if (tabName === 'inventario') {
         encabezados = ['Ingrediente/Insumo', 'Categoría', 'Stock Actual', 'Mínimo', 'Estado'];
-        for(let i=1; i<=5; i++) {
-            let stock = Math.floor(Math.random() * 50);
-            let estado = stock < 10 ? '<span class="text-[var(--peligro)]">Bajo</span>' : '<span class="text-[#10b981]">Óptimo</span>';
+        datosReales.forEach((item) => {
+            let estado = parseFloat(item.stock_actual) <= parseFloat(item.stock_minimo) 
+                ? '<span class="text-[var(--peligro)] font-bold">Bajo / Alerta</span>' 
+                : '<span class="text-[#10b981]">Óptimo</span>';
+                
             filasHTML += `<tr class="border-b border-[var(--borde)] text-sm text-[var(--texto)]">
-                <td class="py-3 px-4">Insumo ${i}</td>
-                <td class="py-3 px-4">Abarrotes</td>
-                <td class="py-3 px-4">${stock} Kg</td>
-                <td class="py-3 px-4">10 Kg</td>
-                <td class="py-3 px-4 font-bold">${estado}</td>
+                <td class="py-3 px-4 font-bold">${item.nombre_producto}</td>
+                <td class="py-3 px-4">${item.categoria}</td>
+                <td class="py-3 px-4">${item.stock_actual} ${item.unidad}</td>
+                <td class="py-3 px-4">${item.stock_minimo} ${item.unidad}</td>
+                <td class="py-3 px-4">${estado}</td>
             </tr>`;
-        }
-    } else if (tabName === 'productos') {
-        encabezados = ['Platillo/Producto', 'Vendidos', 'Costo', 'Precio Venta', 'Margen'];
-        for(let i=1; i<=5; i++) {
-            let costo = (Math.random() * 10).toFixed(2);
-            let precio = (costo * 3).toFixed(2);
-            filasHTML += `<tr class="border-b border-[var(--borde)] text-sm text-[var(--texto)]">
-                <td class="py-3 px-4">Hamburguesa Doble ${i}</td>
-                <td class="py-3 px-4">${Math.floor(Math.random() * 100)}</td>
-                <td class="py-3 px-4">$${costo}</td>
-                <td class="py-3 px-4">$${precio}</td>
-                <td class="py-3 px-4 font-bold text-[#10b981]">66%</td>
-            </tr>`;
-        }
+        });
+        
     } else if (tabName === 'gastos') {
         encabezados = ['Fecha', 'Concepto', 'Categoría', 'Responsable', 'Monto'];
-        for(let i=1; i<=5; i++) {
+        datosReales.forEach((gasto) => {
             filasHTML += `<tr class="border-b border-[var(--borde)] text-sm text-[var(--texto)]">
-                <td class="py-3 px-4">2026-05-${10+i}</td>
-                <td class="py-3 px-4">Compra de Insumos</td>
-                <td class="py-3 px-4">Proveedores</td>
-                <td class="py-3 px-4">Admin</td>
-                <td class="py-3 px-4 font-bold text-[var(--peligro)]">-$${(Math.random() * 300).toFixed(2)}</td>
+                <td class="py-3 px-4">${gasto.fecha}</td>
+                <td class="py-3 px-4">${gasto.concepto}</td>
+                <td class="py-3 px-4">${gasto.categoria}</td>
+                <td class="py-3 px-4">${gasto.responsable}</td>
+                <td class="py-3 px-4 font-bold text-[var(--peligro)]">-$${parseFloat(gasto.monto).toLocaleString('es-CO')}</td>
             </tr>`;
-        }
+        });
     }
 
     let theadHTML = '<tr class="border-b-2 border-[var(--borde)] text-xs uppercase text-[var(--texto-apagado)]">';
@@ -202,7 +250,7 @@ window.renderizarTabla = function(tabName) {
     tbody.innerHTML = filasHTML;
 };
 
-window.dibujarGraficaPrincipal = function() {
+window.dibujarGraficaPrincipal = function(datosReales = null, tipo = '') {
     const canvas = document.getElementById('grafica-principal');
     if (!canvas) return;
 
@@ -217,29 +265,59 @@ window.dibujarGraficaPrincipal = function() {
     const colorTextoApagado = estilos.getPropertyValue('--texto-apagado').trim();
     const colorBorde = estilos.getPropertyValue('--borde').trim();
     const colorTarjeta = estilos.getPropertyValue('--tarjeta').trim();
+    const colorPeligro = estilos.getPropertyValue('--peligro').trim() || '#ef4444';
 
     const primarioCSS = colorPrimario.startsWith('oklch') ? colorPrimario : `oklch(${colorPrimario})`;
     const textoCSS = colorTextoApagado.startsWith('oklch') ? colorTextoApagado : `oklch(${colorTextoApagado})`;
     const bordeCSS = colorBorde.startsWith('oklch') ? colorBorde : `oklch(${colorBorde})`;
     const tarjetaCSS = colorTarjeta.startsWith('oklch') ? colorTarjeta : `oklch(${colorTarjeta})`;
 
-    const etiquetas = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    const datosGrafica = Array.from({length: 7}, () => Math.floor(Math.random() * 1000) + 200);
+    let etiquetas = [];
+    let datosGrafica = [];
+    let tipoGrafica = 'line';
+    let colorFondo = 'rgba(255, 99, 132, 0.1)';
+    let colorLinea = primarioCSS;
+
+    if (!datosReales || datosReales.length === 0) {
+        // Si no hay datos, gráfica vacía
+        etiquetas = ['Sin Datos'];
+        datosGrafica = [0];
+    } else {
+        if (tipo === 'ventas') {
+            etiquetas = datosReales.map(item => item.fecha);
+            datosGrafica = datosReales.map(item => parseFloat(item.total));
+        } else if (tipo === 'productos') {
+            tipoGrafica = 'bar';
+            etiquetas = datosReales.map(item => item.producto);
+            datosGrafica = datosReales.map(item => parseInt(item.cantidad_vendida));
+            colorFondo = primarioCSS;
+        } else if (tipo === 'gastos') {
+            etiquetas = datosReales.map(item => item.fecha);
+            datosGrafica = datosReales.map(item => parseFloat(item.monto));
+            colorLinea = colorPeligro.startsWith('oklch') ? colorPeligro : `oklch(${colorPeligro})`;
+            colorFondo = 'rgba(239, 68, 68, 0.1)'; // Rojo suave
+        } else if (tipo === 'inventario') {
+            tipoGrafica = 'bar';
+            etiquetas = datosReales.map(item => item.nombre_producto);
+            datosGrafica = datosReales.map(item => parseFloat(item.stock_actual));
+            colorFondo = primarioCSS;
+        }
+    }
 
     window.miGraficaReportes = new Chart(ctx, {
-        type: 'line',
+        type: tipoGrafica,
         data: {
             labels: etiquetas,
             datasets: [{
-                label: `Datos de ${window.tabActual}`,
+                label: `Métricas de ${tipo}`,
                 data: datosGrafica,
-                borderColor: primarioCSS, 
-                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                borderColor: colorLinea, 
+                backgroundColor: colorFondo,
                 borderWidth: 3,
                 fill: true,
                 tension: 0.4,
                 pointBackgroundColor: tarjetaCSS,
-                pointBorderColor: primarioCSS,
+                pointBorderColor: colorLinea,
                 pointBorderWidth: 2,
                 pointRadius: 4
             }]
@@ -249,15 +327,8 @@ window.dibujarGraficaPrincipal = function() {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: bordeCSS },
-                    ticks: { color: textoCSS }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: textoCSS }
-                }
+                y: { beginAtZero: true, grid: { color: bordeCSS }, ticks: { color: textoCSS } },
+                x: { grid: { display: false }, ticks: { color: textoCSS } }
             }
         }
     });
@@ -273,7 +344,6 @@ window.exportarAExcel = function() {
     for (let i = 0; i < filas.length; i++) {
         let filaData = [];
         const columnas = filas[i].querySelectorAll('td, th');
-        
         for (let j = 0; j < columnas.length; j++) {
             let texto = columnas[j].innerText.replace(/"/g, '""').trim();
             filaData.push(`"${texto}"`);
@@ -283,15 +353,12 @@ window.exportarAExcel = function() {
     
     const csvFile = new Blob(["\uFEFF" + csv.join('\n')], {type: 'text/csv;charset=utf-8;'});
     const url = window.URL.createObjectURL(csvFile);
-    
     const enlaceDescarga = document.createElement('a');
     enlaceDescarga.download = `Reporte_${window.tabActual}_${new Date().toISOString().split('T')[0]}.csv`;
     enlaceDescarga.href = url;
     enlaceDescarga.style.display = 'none';
-    
     document.body.appendChild(enlaceDescarga);
     enlaceDescarga.click();
-    
     document.body.removeChild(enlaceDescarga);
     window.URL.revokeObjectURL(url);
 };
