@@ -9,12 +9,10 @@
     console.log("📦 Módulo de Inventario y Menú cargado y blindado en archivo independiente.");
 
     // --- RUTAS API (DJANGO) ---
-    // Usamos 'var' para evitar bloqueos de redeclaración al re-inyectar el script en el DOM
     var API_BASE = "http://127.0.0.1:8000/api/inventario";
     var INV_CATEGORIES = ["Carnes", "Mariscos", "Lácteos", "Verduras", "Bebidas", "Básicos", "Panadería"];
 
     // --- ESTADO PROTEGIDO DEL MÓDULO ---
-    // Anclamos a 'window' para que la data sobreviva si el usuario va a otro módulo y regresa
     window.estadoInv = window.estadoInv || {
         search: "",
         filterCat: "all",
@@ -30,7 +28,7 @@
     async function initInventario() {
         console.log("🔄 Sincronizando inventario y menú con el backend...");
         await cargarInsumosBackend(); 
-        await cargarPlatosBackend(); // 🔥 Descargamos los platos de la BD
+        await cargarPlatosBackend(); 
         
         renderFiltrosInv();
         renderOpcionesSelect();
@@ -61,14 +59,14 @@
             }
         } catch (error) {
             console.error("❌ Error conectando al backend (Insumos):", error);
-            window.estadoInv.items = []; // Fallback seguro en caso de desconexión
+            window.estadoInv.items = []; 
         }
     }
 
     async function guardarInsumoBackend(insumoPayload) {
         try {
             const res = await fetch(`${API_BASE}/insumos/`, {
-                method: 'POST',
+                method: 'POST', // Tu backend lo maneja como POST/PUT
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(insumoPayload)
             });
@@ -111,7 +109,7 @@
             
             if (data.estado === "exitoso") {
                 window.cerrarModalPlato();
-                await initInventario(); // Recargamos todo para ver el plato recién guardado
+                await initInventario(); 
             } else {
                 alert("Error del servidor: " + data.mensaje);
             }
@@ -204,6 +202,7 @@
             const status = calcularEstado(item);
             const pct = Math.min((item.currentStock / (item.minStock * 2)) * 100, 100);
 
+            // 🔥 SE AGREGÓ EL BOTÓN DE ELIMINAR INSUMO AQUÍ ABAJO 🔥
             return `
                 <tr class="border-b border-border hover:bg-secondary/50 transition-colors">
                     <td class="px-4 py-3 font-medium text-foreground"><div class="flex items-center gap-2"><i data-lucide="package" class="w-3.5 h-3.5 text-muted"></i>${item.name}</div></td>
@@ -214,9 +213,14 @@
                     <td class="px-4 py-3"><span class="inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full border ${status.bg} ${status.color}">${status.label}</span></td>
                     <td class="px-4 py-3 text-muted text-sm">${item.supplier}</td>
                     <td class="px-4 py-3 text-right">
-                        <button onclick='window.abrirModalInventarioConDatos(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="p-1.5 rounded-md hover:bg-secondary text-muted hover:text-foreground">
-                            <i data-lucide="pencil" class="w-4 h-4"></i>
-                        </button>
+                        <div class="flex justify-end gap-2">
+                            <button onclick='window.abrirModalInventarioConDatos(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="p-1.5 rounded-md hover:bg-secondary text-muted hover:text-foreground">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="window.eliminarInsumo(${item.id})" class="p-1.5 rounded-md hover:bg-red-500/20 text-red-400 hover:text-red-500">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -234,16 +238,26 @@
         const tbody = document.getElementById('platos-table-body');
         if (!tbody) return;
         
+        // 💡 Subimos el colspan a 6 porque ahora agregamos la columna de Estado
         if (window.estadoInv.platos.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-muted italic">No hay platos registrados. Crea uno nuevo.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-muted italic">No hay platos registrados. Crea uno nuevo.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = window.estadoInv.platos.map(plato => {
-            // Manejo seguro por si el backend no devuelve la receta como array
             const recetaArreglo = Array.isArray(plato.receta) ? plato.receta : [];
             const resumenReceta = recetaArreglo.map(ing => ing.nombre).join(', ');
             const recetaTexto = resumenReceta.length > 35 ? resumenReceta.substring(0, 35) + '...' : resumenReceta;
+
+            // 🎨 Mapeo de estilos dinámicos para los estados que vienen de Django (Activo, Inactivo, Agotado)
+            let badgeClass = "bg-green-500/10 text-green-400 border-green-500/30";
+            let estadoLabel = plato.estado || "Activo";
+
+            if (estadoLabel.toLowerCase() === 'inactivo') {
+                badgeClass = "bg-zinc-500/10 text-zinc-400 border-zinc-500/30";
+            } else if (estadoLabel.toLowerCase() === 'agotado') {
+                badgeClass = "bg-yellow-500/10 text-yellow-400 border-yellow-500/30";
+            }
 
             return `
                 <tr class="border-b border-border hover:bg-secondary/50 transition-colors">
@@ -251,14 +265,27 @@
                     <td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full bg-secondary text-muted border border-border">${plato.categoria}</span></td>
                     <td class="px-4 py-3 font-bold text-foreground">$${plato.precio.toLocaleString()}</td>
                     <td class="px-4 py-3 text-xs text-muted" title="${resumenReceta}"><span class="font-bold text-foreground">${recetaArreglo.length} insumos:</span> ${recetaTexto || 'Sin receta'}</td>
+                    
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full border ${badgeClass}">
+                            ${estadoLabel.toUpperCase()}
+                        </span>
+                    </td>
+
                     <td class="px-4 py-3 text-right">
-                        <button onclick='window.abrirModalPlatoConDatos(${JSON.stringify(plato).replace(/'/g, "&apos;")})' class="p-1.5 rounded-md hover:bg-secondary text-muted hover:text-foreground transition-colors">
-                            <i data-lucide="pencil" class="w-4 h-4"></i>
-                        </button>
+                        <div class="flex justify-end gap-2">
+                            <button onclick='window.abrirModalPlatoConDatos(${JSON.stringify(plato).replace(/'/g, "&apos;")})' class="p-1.5 rounded-md hover:bg-secondary text-muted hover:text-foreground transition-colors" title="Editar Plato">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="window.eliminarPlato(${plato.id})" class="p-1.5 rounded-md hover:bg-red-500/20 text-red-400 hover:text-red-500 transition-colors" title="Eliminar Plato">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
         }).join('');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     function renderRecetaTemporal() {
@@ -285,7 +312,7 @@
     }
 
     // ==========================================
-    // 4. FUNCIONES GLOBALES (Ancladas de forma segura a Window)
+    // 4. FUNCIONES GLOBALES (Ancladas a Window)
     // ==========================================
     window.cambiarTabInv = function(tab) {
         const vistaInsumos = document.getElementById('vista-insumos');
@@ -378,6 +405,7 @@
     window.cerrarModalInventario = cerrarModalInventario;
 
     window.guardarInsumo = function() {
+        const id = document.getElementById("inv-form-id").value;
         const name = document.getElementById("inv-form-name").value.trim();
         const currentStock = parseFloat(document.getElementById("inv-form-current").value) || 0;
         const minStock = parseFloat(document.getElementById("inv-form-min").value) || 1;
@@ -391,6 +419,7 @@
         }
 
         const payload = {
+            id: id || null, // Aseguramos que el ID se envíe si existe para actualizar
             nombre: name,
             stock_actual: currentStock,
             stock_minimo: minStock,
@@ -400,6 +429,59 @@
         };
 
         guardarInsumoBackend(payload);
+    };
+
+    // 🔥 LA NUEVA FUNCIÓN PARA ELIMINAR INSUMOS 🔥
+    window.eliminarInsumo = async function(idInsumo) {
+        if (!confirm("⚠️ ¿Estás seguro de que deseas eliminar este insumo de la bodega? Esta acción no se puede deshacer.")) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/insumos/`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: idInsumo })
+            });
+            const data = await res.json();
+            
+            if (data.estado === "exitoso") {
+                // Sincronizamos de nuevo para que el insumo desaparezca visualmente
+                await initInventario(); 
+            } else {
+                alert("Restricción del sistema: " + data.mensaje);
+            }
+        } catch (error) {
+            console.error("❌ Error eliminando insumo:", error);
+            alert("No se pudo conectar con el servidor.");
+        }
+    };
+
+    window.eliminarPlato = async function(idPlato) {
+        // Cambié un poco el mensaje para que sea más preciso
+        if (!confirm("⚠️ ¿Estás seguro de que deseas quitar este plato del menú?")) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/platos/`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: idPlato })
+            });
+            const data = await res.json();
+            
+            if (data.estado === "exitoso") {
+                // 💡 Aquí le mostramos al administrador si el plato se borró físicamente o solo se inactivó
+                alert("✅ " + data.mensaje);
+                await initInventario(); 
+            } else {
+                alert("❌ Error al eliminar: " + data.mensaje);
+            }
+        } catch (error) {
+            console.error("❌ Error eliminando plato:", error);
+            alert("No se pudo conectar con el servidor.");
+        }
     };
 
     window.abrirModalPlato = function() {
@@ -488,12 +570,10 @@
     };
 
     window.quitarInsumoReceta = function(idInsumo) {
-        // Convertimos ambos a String para evitar el choque de tipos (Número vs Texto)
         window.recetaTemporal = window.recetaTemporal.filter(r => String(r.idInsumo) !== String(idInsumo));
         renderRecetaTemporal();
     };
 
-    // 🔥 La función clave que envía el plato a Django
     window.guardarPlato = function() {
         const id = document.getElementById("plato-form-id").value;
         const nombre = document.getElementById("plato-form-name").value.trim();
@@ -522,26 +602,22 @@
     function vigilarPestañaInventario() {
         const moduloInventario = document.getElementById("app-inventario");
         if (moduloInventario) {
-            // Evaluamos si el contenedor del inventario está renderizado y visible físicamente
             const esVisible = moduloInventario.offsetParent !== null;
             
             if (esVisible) {
                 if (!moduloInventario.dataset.inicializado) {
                     moduloInventario.dataset.inicializado = "true";
-                    initInventario(); // Ejecuta sincronización fresca en el momento preciso
+                    initInventario(); 
                 }
             } else {
-                // Remueve bandera al salir para forzar una recarga limpia al regresar
                 moduloInventario.removeAttribute("data-inicializado");
             }
         }
     }
 
-    // 🔥 Limpieza del vigilante anterior para evitar bucles infinitos de memoria
     if (window.vigilanteInvInterval) {
         clearInterval(window.vigilanteInvInterval);
     }
-    // Ciclo repetitivo de baja carga (cada 300ms) para control asíncrono
     window.vigilanteInvInterval = setInterval(vigilarPestañaInventario, 300);
 
 })();

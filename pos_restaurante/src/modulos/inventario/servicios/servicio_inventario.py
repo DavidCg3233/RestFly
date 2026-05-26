@@ -13,22 +13,37 @@ class ServicioInventario:
                 "stock_actual": float(inv.stock_actual),
                 "stock_minimo": float(inv.stock_minimo),
                 "unidad_medida": inv.unidad_medida,
-                "proveedor": "Por definir" # Omitido en la DB actual
+                "proveedor": "Por definir" 
             } for inv in insumos
         ]
 
     @staticmethod
-    def registrar_insumo(datos):
+    def registrar_o_actualizar_insumo(datos):
+        id_insumo = datos.get('id')
         datos_prod = {
             "nombre": datos.get('nombre'),
-            "categoria": datos.get('categoria', 'Básicos') # Asume Básicos si no llega
+            "categoria": datos.get('categoria', 'Básicos') 
         }
         datos_inv = {
             "stock_actual": datos.get('stock_actual', 0),
             "stock_minimo": datos.get('stock_minimo', 1),
             "unidad_medida": datos.get('unidad_medida', 'unidades')
         }
-        RepositorioInventario.crear_insumo(datos_prod, datos_inv)
+        
+        if id_insumo:
+            RepositorioInventario.actualizar_insumo(id_insumo, datos_prod, datos_inv)
+            return "Insumo actualizado correctamente."
+        else:
+            RepositorioInventario.crear_insumo(datos_prod, datos_inv)
+            return "Insumo creado correctamente."
+
+    @staticmethod
+    def eliminar_insumo(id_insumo):
+        if not id_insumo:
+            raise ValueError("Se requiere el ID del insumo para eliminar.")
+        
+        RepositorioInventario.eliminar_insumo(id_insumo)
+        return "Insumo eliminado correctamente."
 
     @staticmethod
     def listar_platos():
@@ -48,25 +63,26 @@ class ServicioInventario:
                 "nombre": p.nombre_producto,
                 "categoria": p.id_categoria.nombre_categoria,
                 "precio": float(p.precio),
+                "estado": p.id_estado_producto.nombre_estado_producto,
                 "receta": receta
             })
         return resultado
 
     @staticmethod
     def registrar_o_actualizar_plato(datos):
-        # Capturamos el ID si existe (el front debe enviarlo al editar)
         id_plato = datos.get('id')
         nombre = datos.get('nombre')
         precio = datos.get('precio')
+        estado = datos.get('estado', 'activo')
         
-        # Validación temprana
         if not nombre or precio is None:
             raise ValueError("Faltan datos obligatorios: 'nombre' o 'precio' en el JSON.")
 
         datos_plato = {
             "nombre": nombre,
             "precio": precio,
-            "categoria": datos.get('categoria', 'Comidas Rápidas')
+            "categoria": datos.get('categoria', 'Comidas Rápidas'),
+            "estado": estado
         }
         
         ingredientes = datos.get('receta', [])
@@ -74,10 +90,17 @@ class ServicioInventario:
         if not ingredientes:
             raise ValueError("El plato no tiene ingredientes en la llave 'receta'.")
 
-        # 🔥 LA MAGIA DE DECISIÓN
         if id_plato:
             RepositorioInventario.actualizar_plato_con_receta(id_plato, datos_plato, ingredientes)
             return "Plato y receta actualizados correctamente."
         else:
             RepositorioInventario.crear_plato_con_receta(datos_plato, ingredientes)
             return "Plato y receta creados correctamente."
+
+    @staticmethod
+    def eliminar_plato(id_plato):
+        if not id_plato:
+            raise ValueError("Se requiere el ID del plato para eliminar.")
+        
+        # ✅ Ahora sí está dentro de la clase y alineado perfectamente
+        return RepositorioInventario.eliminar_plato(id_plato)

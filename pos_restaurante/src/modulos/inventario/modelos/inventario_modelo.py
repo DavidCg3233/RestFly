@@ -38,7 +38,6 @@ class Inventario(models.Model):
         db_table = 'inventario'
         managed = False
 
-# ATENCIÓN: Esta tabla debes crearla en MySQL para soportar la lógica del frontend
 class Receta(models.Model):
     id_receta = models.AutoField(primary_key=True)
     id_plato = models.ForeignKey(Producto, related_name='ingredientes', on_delete=models.RESTRICT, db_column='id_plato')
