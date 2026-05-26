@@ -10,7 +10,12 @@
 
     // --- RUTAS API (DJANGO) ---
     var API_BASE = "http://127.0.0.1:8000/api/inventario";
+    
+    // Categorías para materias primas (Insumos)
     var INV_CATEGORIES = ["Carnes", "Mariscos", "Lácteos", "Verduras", "Bebidas", "Básicos", "Panadería"];
+    
+    // 🟢 NUEVO: Categorías exclusivas para los Platos Terminados (Menú)
+    window.CATEGORIAS_PLATOS = ["Comida", "Bebida", "Postre"];
 
     // --- ESTADO PROTEGIDO DEL MÓDULO ---
     window.estadoInv = window.estadoInv || {
@@ -31,7 +36,7 @@
         await cargarPlatosBackend(); 
         
         renderFiltrosInv();
-        renderOpcionesSelect();
+        renderOpcionesSelect(); // Mapea opciones del form de insumos
         actualizarVista();
         renderTablaPlatos();
         
@@ -66,7 +71,7 @@
     async function guardarInsumoBackend(insumoPayload) {
         try {
             const res = await fetch(`${API_BASE}/insumos/`, {
-                method: 'POST', // Tu backend lo maneja como POST/PUT
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(insumoPayload)
             });
@@ -148,9 +153,15 @@
     }
 
     function renderOpcionesSelect() {
-        const select = document.getElementById("inv-form-category");
-        if (select) {
-            select.innerHTML = INV_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+        const selectInsumo = document.getElementById("inv-form-category");
+        if (selectInsumo) {
+            selectInsumo.innerHTML = INV_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+        
+        // 🟢 NUEVO: Renderiza el combo box del formulario de Plato con las 3 opciones oficiales
+        const selectPlato = document.getElementById("plato-form-category");
+        if (selectPlato) {
+            selectPlato.innerHTML = window.CATEGORIAS_PLATOS.map(c => `<option value="${c}">${c}</option>`).join('');
         }
     }
 
@@ -202,7 +213,6 @@
             const status = calcularEstado(item);
             const pct = Math.min((item.currentStock / (item.minStock * 2)) * 100, 100);
 
-            // 🔥 SE AGREGÓ EL BOTÓN DE ELIMINAR INSUMO AQUÍ ABAJO 🔥
             return `
                 <tr class="border-b border-border hover:bg-secondary/50 transition-colors">
                     <td class="px-4 py-3 font-medium text-foreground"><div class="flex items-center gap-2"><i data-lucide="package" class="w-3.5 h-3.5 text-muted"></i>${item.name}</div></td>
@@ -238,7 +248,6 @@
         const tbody = document.getElementById('platos-table-body');
         if (!tbody) return;
         
-        // 💡 Subimos el colspan a 6 porque ahora agregamos la columna de Estado
         if (window.estadoInv.platos.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-muted italic">No hay platos registrados. Crea uno nuevo.</td></tr>`;
             return;
@@ -249,7 +258,6 @@
             const resumenReceta = recetaArreglo.map(ing => ing.nombre).join(', ');
             const recetaTexto = resumenReceta.length > 35 ? resumenReceta.substring(0, 35) + '...' : resumenReceta;
 
-            // 🎨 Mapeo de estilos dinámicos para los estados que vienen de Django (Activo, Inactivo, Agotado)
             let badgeClass = "bg-green-500/10 text-green-400 border-green-500/30";
             let estadoLabel = plato.estado || "Activo";
 
@@ -419,7 +427,7 @@
         }
 
         const payload = {
-            id: id || null, // Aseguramos que el ID se envíe si existe para actualizar
+            id: id || null,
             nombre: name,
             stock_actual: currentStock,
             stock_minimo: minStock,
@@ -431,7 +439,6 @@
         guardarInsumoBackend(payload);
     };
 
-    // 🔥 LA NUEVA FUNCIÓN PARA ELIMINAR INSUMOS 🔥
     window.eliminarInsumo = async function(idInsumo) {
         if (!confirm("⚠️ ¿Estás seguro de que deseas eliminar este insumo de la bodega? Esta acción no se puede deshacer.")) {
             return;
@@ -446,7 +453,6 @@
             const data = await res.json();
             
             if (data.estado === "exitoso") {
-                // Sincronizamos de nuevo para que el insumo desaparezca visualmente
                 await initInventario(); 
             } else {
                 alert("Restricción del sistema: " + data.mensaje);
@@ -458,7 +464,6 @@
     };
 
     window.eliminarPlato = async function(idPlato) {
-        // Cambié un poco el mensaje para que sea más preciso
         if (!confirm("⚠️ ¿Estás seguro de que deseas quitar este plato del menú?")) {
             return;
         }
@@ -472,7 +477,6 @@
             const data = await res.json();
             
             if (data.estado === "exitoso") {
-                // 💡 Aquí le mostramos al administrador si el plato se borró físicamente o solo se inactivó
                 alert("✅ " + data.mensaje);
                 await initInventario(); 
             } else {
@@ -493,13 +497,16 @@
         selectInsumos.innerHTML = window.estadoInv.items.map(i => 
             `<option value="${i.id}" data-unidad="${i.unit}" data-nombre="${i.name}">${i.name} (${i.unit})</option>`
         ).join('');
+        
+        // 🟢 NUEVO: Nos aseguramos de forzar el mapeo de opciones correctas
+        renderOpcionesSelect(); 
 
         document.getElementById("plato-modal-title").textContent = "Nuevo Plato";
         document.getElementById("plato-btn-save").textContent = "Crear Plato";
         document.getElementById("plato-form-id").value = "";
         document.getElementById("plato-form-name").value = "";
         document.getElementById("plato-form-price").value = "";
-        document.getElementById("plato-form-category").value = "Comidas Rápidas";
+        document.getElementById("plato-form-category").value = "Comida"; // 🟢 NUEVO: Default 'Comida'
         
         window.recetaTemporal = [];
 
@@ -517,6 +524,8 @@
         selectInsumos.innerHTML = window.estadoInv.items.map(i => 
             `<option value="${i.id}" data-unidad="${i.unit}" data-nombre="${i.name}">${i.name} (${i.unit})</option>`
         ).join('');
+        
+        renderOpcionesSelect();
 
         document.getElementById("plato-modal-title").textContent = "Editar Plato";
         document.getElementById("plato-btn-save").textContent = "Guardar cambios";

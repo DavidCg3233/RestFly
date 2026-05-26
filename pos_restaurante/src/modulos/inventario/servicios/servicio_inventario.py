@@ -78,10 +78,18 @@ class ServicioInventario:
         if not nombre or precio is None:
             raise ValueError("Faltan datos obligatorios: 'nombre' o 'precio' en el JSON.")
 
+        # Definimos las categorías válidas que espera tu vista de mesas
+        categorias_validas = ['Comida', 'Bebida', 'Postre']
+        categoria_input = datos.get('categoria', 'Comida') # 'Comida' por defecto si no viene
+
+        # Si viene una categoría que no mapea con las 3 principales, la forzamos a 'Comida'
+        if categoria_input not in categorias_validas:
+            categoria_input = 'Comida'
+
         datos_plato = {
             "nombre": nombre,
             "precio": precio,
-            "categoria": datos.get('categoria', 'Comidas Rápidas'),
+            "categoria": categoria_input,
             "estado": estado
         }
         
@@ -96,11 +104,3 @@ class ServicioInventario:
         else:
             RepositorioInventario.crear_plato_con_receta(datos_plato, ingredientes)
             return "Plato y receta creados correctamente."
-
-    @staticmethod
-    def eliminar_plato(id_plato):
-        if not id_plato:
-            raise ValueError("Se requiere el ID del plato para eliminar.")
-        
-        # ✅ Ahora sí está dentro de la clase y alineado perfectamente
-        return RepositorioInventario.eliminar_plato(id_plato)

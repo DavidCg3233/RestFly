@@ -68,7 +68,8 @@
                         <th class="px-4 py-3 font-medium">Categoría</th>
                         <th class="px-4 py-3 font-medium">Precio Venta</th>
                         <th class="px-4 py-3 font-medium">Resumen Receta</th>
-                        <th class="px-4 py-3">Estado</th> <th class="px-4 py-3 text-right">Acciones</th>
+                        <th class="px-4 py-3">Estado</th> 
+                        <th class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="platos-table-body" class="divide-y divide-border"></tbody>
@@ -113,7 +114,7 @@
                 <div class="flex-1">
                     <label class="block text-sm font-medium text-muted mb-1">Categoría</label>
                     <select id="inv-form-category" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
-                        </select>
+                    </select>
                 </div>
             </div>
 
@@ -156,7 +157,12 @@
 
             <div>
                 <label class="block text-sm font-medium text-muted mb-1">Categoría</label>
-                <input type="text" id="plato-form-category" value="Comidas Rápidas" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+                <select id="plato-form-category" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+                    <option value="Comidas Rápidas">Comidas Rápidas</option>
+                    <option value="Comida">Comida</option>
+                    <option value="Bebida">Bebida</option>
+                    <option value="Postre">Postre</option>
+                </select>
             </div>
         </div>
 
@@ -175,7 +181,7 @@
                 <div class="flex gap-2 mb-4">
                     <div class="flex-1">
                         <select id="plato-form-insumo" class="w-full rounded-md border border-border bg-background px-2 py-2 text-xs text-foreground focus:ring-2 focus:ring-primary/50">
-                            </select>
+                        </select>
                     </div>
                     <input type="number" id="plato-form-cantidad" placeholder="Cant." class="w-20 rounded-md border border-border bg-background px-2 py-2 text-xs text-foreground focus:ring-2 focus:ring-primary/50">
                     <button onclick="agregarInsumoReceta()" class="px-3 bg-secondary text-foreground rounded-md hover:bg-secondary/80 border border-border">
@@ -184,7 +190,7 @@
                 </div>
 
                 <div id="plato-receta-lista" class="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2">
-                    </div>
+                </div>
             </div>
 
             <button id="plato-btn-save" onclick="guardarPlato()" class="w-full py-2.5 mt-auto bg-foreground text-background hover:bg-foreground/90 rounded-lg text-sm font-bold transition-colors">

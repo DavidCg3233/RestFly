@@ -38,13 +38,13 @@ class ServicioMesas:
             mesas_front.append({
                 "id": m_id,
                 "number": str(m['numero_mesa']).zfill(2),
-                "zone": "GENERAL", # Se asume una zona global, o se ajusta si se crea tabla zonas
+                "zone": "GENERAL",
                 "capacity": m['capacidad'],
                 "status": estado_js,
                 "orderId": p_id
             })
 
-            # Si hay pedido abierto, traer detalle
+            # Si la mesa cuenta con un pedido activo/abierto en curso, extraemos el detalle completo
             if m['id_pedido']:
                 detalles = RepositorioMesas.obtener_detalle_pedido(m['id_pedido'])
                 items = []
@@ -62,24 +62,23 @@ class ServicioMesas:
                     
                 pedidos_front.append({
                     "id": p_id,
-                    "mesero": f"Usuario {m['id_usuario']}", 
+                    "mesero": f"Usuario {m['id_usuario']}",
                     "total": total,
                     "items": items
                 })
 
         productos_front = []
         for p in productos_db:
-            cat_js = "cocina"
-            area = p['nombre_area'].lower()
-            if "bar" in area: cat_js = "bar"
-            elif "postre" in area: cat_js = "postre"
+            # Sincronizamos las categorías dinámicamente con tu tabla de categorías del inventario
+            cat_js = p['nombre_categoria'].lower() if p['nombre_categoria'] else "cocina"
 
             productos_front.append({
                 "id": f"prod_{p['id_producto']}",
                 "name": p['nombre_producto'],
-                "desc": p['descripcion'] or "",
+                "desc": p['descripcion'] if p['descripcion'] else "Sin descripción disponible.",
                 "price": float(p['precio']),
-                "cat": cat_js
+                "cat": cat_js,
+                "estado": p['nombre_estado_producto'].lower() # 'activo' o 'agotado'
             })
 
         return {

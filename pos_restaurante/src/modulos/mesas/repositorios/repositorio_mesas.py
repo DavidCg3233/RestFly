@@ -13,13 +13,16 @@ class RepositorioMesas:
     @staticmethod
     def obtener_mesas_y_estados():
         with connection.cursor() as cursor:
+            # Sincronizamos para traer pedidos que NO estén finalizados (ej: terminados/cancelados)
+            # Cambié el filtro estricto por un IN con estados activos en cocina/mesa
             query = """
-                SELECT 
+                SELECT
                     m.id_mesa, m.numero_mesa, m.capacidad, em.nombre_estado_mesa,
                     p.id_pedido, p.id_usuario
                 FROM mesa m
                 INNER JOIN estado_mesa em ON m.id_estado_mesa = em.id_estado_mesa
-                LEFT JOIN pedido p ON m.id_mesa = p.id_mesa AND p.id_estado_pedido = 1
+                LEFT JOIN pedido p ON m.id_mesa = p.id_mesa 
+                    AND p.id_estado_pedido IN (1, 2, 3) -- 1: Abierto, 2: En cocina, 3: Listo (Ajustar IDs si varían)
             """
             cursor.execute(query)
             return RepositorioMesas.dictfetchall(cursor)
@@ -27,13 +30,16 @@ class RepositorioMesas:
     @staticmethod
     def obtener_productos_menu():
         with connection.cursor() as cursor:
+            # Iván, aquí agregamos el id_estado_producto y la descripción real
+            # Traemos sólo los que NO estén inactivos (Activo = 1, Agotado = 2 por ejemplo)
             query = """
-                SELECT 
-                    p.id_producto, p.nombre_producto, p.descripcion, p.precio, 
-                    a.nombre_area
+                SELECT
+                    p.id_producto, p.nombre_producto, p.descripcion, p.precio,
+                    p.id_estado_producto, ep.nombre_estado_producto, c.nombre_categoria
                 FROM producto p
-                INNER JOIN area_trabajo a ON p.id_area = a.id_area
-                WHERE p.id_estado_producto = 1 -- 1: activo
+                INNER JOIN categoria_producto c ON p.id_categoria = c.id_categoria
+                INNER JOIN estado_producto ep ON p.id_estado_producto = ep.id_estado_producto
+                WHERE ep.nombre_estado_producto != 'inactivo' -- Excluimos borrados lógicos
             """
             cursor.execute(query)
             return RepositorioMesas.dictfetchall(cursor)

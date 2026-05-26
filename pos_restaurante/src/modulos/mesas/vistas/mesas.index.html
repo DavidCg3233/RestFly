@@ -8,12 +8,12 @@
             <p class="text-muted text-sm mt-1">Gestión en tiempo real de disponibilidad y pedidos</p>
         </div>
         
-        <div class="flex items-center gap-4">
+        <div class="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
             <button id="btn-crear-mesa" onclick="window.abrirModalNuevaMesa()" class="hidden bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold hover:brightness-110 transition-all flex items-center gap-2 shadow-lg">
                 <i data-lucide="plus" class="w-4 h-4"></i> Nueva Mesa
             </button>
 
-            <div class="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-lg border border-border">
+            <div class="flex items-center gap-2 px-3 py-1.5 bg-secondary rounded-lg border border-border ml-auto md:ml-0">
                 <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                 <span class="text-xs font-medium" id="nombre-mesero">Admin Principal</span>
             </div>
@@ -47,72 +47,74 @@
         </div>
     </div>
 
-    <div id="modal-pedido" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="absolute inset-0" onclick="window.cerrarModalPedido()"></div>
+    <div id="modal-pedido" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div class="absolute inset-0 hidden sm:block" onclick="window.cerrarModalPedido()"></div>
 
-        <div class="bg-card border border-border text-foreground w-full max-w-5xl max-h-[90vh] rounded-2xl flex flex-col shadow-2xl relative z-10 overflow-hidden animate-in fade-in zoom-in-95 duration-200" id="modal-contenido">
+        <div class="bg-card border-0 sm:border border-border text-foreground w-full sm:max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:rounded-2xl flex flex-col shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200" id="modal-contenido">
             
-            <div class="px-6 py-4 border-b border-border bg-muted/30">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-4">
-                        <div class="p-2 bg-primary/10 rounded-lg">
+            <div class="px-4 sm:px-6 py-4 border-b border-border bg-muted/30 shrink-0">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-primary/10 rounded-lg shrink-0">
                             <i data-lucide="layout-dashboard" class="w-5 h-5 text-primary"></i>
                         </div>
-                        <div>
-                            <h3 class="text-xl font-bold" id="modal-titulo-mesa">Mesa # --</h3>
-                            <p class="text-muted text-xs uppercase tracking-wider font-semibold" id="modal-subtitulo-pedido">SIN PEDIDO</p>
+                        <div class="min-w-0">
+                            <h3 class="text-lg font-bold truncate" id="modal-titulo-mesa">Mesa # --</h3>
+                            <p class="text-muted text-[10px] uppercase tracking-wider font-semibold" id="modal-subtitulo-pedido">SIN PEDIDO</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <div class="flex p-1 bg-secondary rounded-xl border border-border" id="modal-botones-estado"></div>
-                        <button onclick="window.cerrarModalPedido()" class="p-2 hover:bg-destructive/10 hover:text-destructive rounded-full transition-colors">
+                    
+                    <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                        <div class="flex p-1 bg-secondary rounded-xl border border-border overflow-x-auto scrollbar-none max-w-[70vw] sm:max-w-none whitespace-nowrap" id="modal-botones-estado"></div>
+                        
+                        <button onclick="window.cerrarModalPedido()" class="p-2 hover:bg-destructive/10 hover:text-destructive rounded-full transition-colors shrink-0">
                             <i data-lucide="x" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div class="flex flex-1 overflow-hidden flex-col lg:flex-row">
-                <div class="flex flex-1 overflow-hidden">
-                    <div class="flex-1 flex flex-col overflow-hidden border-r border-border">
-                        <div class="flex gap-2 p-4 bg-background border-b border-border overflow-x-auto">
-                            <button onclick="window.cambiarTab('cocina')" id="tab-cocina" class="tab-btn active px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
-                                <i data-lucide="chef-hat" class="w-4 h-4"></i> Cocina
-                            </button>
-                            <button onclick="window.cambiarTab('bar')" id="tab-bar" class="tab-btn px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 text-muted hover:bg-secondary">
-                                <i data-lucide="wine" class="w-4 h-4"></i> Bar
-                            </button>
-                            <button onclick="window.cambiarTab('postre')" id="tab-postre" class="tab-btn px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 text-muted hover:bg-secondary">
-                                <i data-lucide="cake-slice" class="w-4 h-4"></i> Postres
-                            </button>
-                        </div>
-                        
-                        <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="contenedor-menu"></div>
-                        </div>
+            <div class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-0">
+                
+                <div class="flex-1 flex flex-col overflow-hidden border-b lg:border-b-0 lg:border-r border-border min-h-[50vh] lg:min-h-0">
+                    <div class="flex gap-2 p-3 bg-background border-b border-border overflow-x-auto whitespace-nowrap shrink-0 scrollbar-none">
+                        <button onclick="window.cambiarTab('cocina')" id="tab-cocina" class="tab-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0">
+                            <i data-lucide="chef-hat" class="w-4 h-4"></i> Cocina
+                        </button>
+                        <button onclick="window.cambiarTab('bar')" id="tab-bar" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 text-muted hover:bg-secondary shrink-0">
+                            <i data-lucide="wine" class="w-4 h-4"></i> Bar
+                        </button>
+                        <button onclick="window.cambiarTab('postre')" id="tab-postre" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 text-muted hover:bg-secondary shrink-0">
+                            <i data-lucide="cake-slice" class="w-4 h-4"></i> Postres
+                        </button>
                     </div>
-
-                    <div class="w-80 shrink-0 flex flex-col bg-muted/10">
-                        <div class="p-4 border-b border-border flex items-center justify-between bg-background">
-                            <span class="font-bold flex items-center gap-2">
-                                <i data-lucide="shopping-cart" class="w-4 h-4 text-primary"></i> Detalle
-                            </span>
-                            <span class="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">ACTIVO</span>
-                        </div>
-                        
-                        <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar" id="contenedor-pedido-items"></div>
-
-                        <div class="p-6 border-t border-border bg-background">
-                            <div class="flex justify-between items-end mb-4">
-                                <span class="text-muted text-sm">Subtotal</span>
-                                <span class="text-xl font-bold text-foreground" id="pedido-total">$0.00</span>
-                            </div>
-                            <button onclick="window.confirmarPedido(event)" class="w-full bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98] font-bold py-4 rounded-xl transition-all shadow-lg shadow-primary/25">
-                                ENVIAR A COCINA
-                            </button>
-                        </div>
+                    
+                    <div class="flex-1 overflow-y-auto p-3 sm:p-4 custom-scrollbar">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5" id="contenedor-menu"></div>
                     </div>
                 </div>
+
+                <div class="w-full lg:w-80 shrink-0 flex flex-col bg-muted/5 lg:bg-muted/10 min-h-[40vh] lg:min-h-0 border-t lg:border-t-0 border-border">
+                    <div class="p-3 sm:p-4 border-b border-border flex items-center justify-between bg-background shrink-0">
+                        <span class="font-bold text-sm flex items-center gap-2">
+                            <i data-lucide="shopping-cart" class="w-4 h-4 text-primary"></i> Detalle Comanda
+                        </span>
+                        <span class="text-[9px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold tracking-wide">ACTIVO</span>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-2 custom-scrollbar" id="contenedor-pedido-items"></div>
+
+                    <div class="p-4 sm:p-6 border-t border-border bg-card shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+                        <div class="flex justify-between items-end mb-4">
+                            <span class="text-muted text-xs font-medium uppercase tracking-wider">Subtotal Orden</span>
+                            <span class="text-xl sm:text-2xl font-mono font-black text-foreground" id="pedido-total">$0.00</span>
+                        </div>
+                        <button onclick="window.confirmarPedido(event)" class="w-full bg-primary text-primary-foreground hover:brightness-110 active:scale-[0.98] font-black text-sm uppercase py-4 rounded-xl transition-all shadow-lg shadow-primary/25 flex items-center justify-center gap-2 tracking-wide">
+                            <i data-lucide="send" class="w-4 h-4"></i> Enviar a Cocina
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
