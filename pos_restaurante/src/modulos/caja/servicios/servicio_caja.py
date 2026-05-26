@@ -1,6 +1,27 @@
 from ..repositorios.repositorio_caja import RepositorioCaja
+# 🔥 IMPORTANTE: Descomenta e importa aquí el servicio de tu módulo de mesas
+from src.modulos.mesas.servicios.servicio_mesas import ServicioMesas
 
 class ServicioCaja:
+
+    @staticmethod
+    def contar_pedidos_pendientes():
+        """
+        Llama al módulo de mesas y cuenta cuántos pedidos activos existen.
+        """
+        try:
+            # Traemos el estado actual de todas las mesas
+            estado_mesas = ServicioMesas.obtener_estado_inicial()
+            
+            # Contamos cuántos pedidos hay en la lista "pedidos"
+            cantidad_pendientes = len(estado_mesas.get("pedidos", []))
+            
+            return cantidad_pendientes
+        except Exception as e:
+            print(f"Error al contar pedidos pendientes: {e}")
+            # Si hay algún error de conexión o importación, retornamos 0 
+            # para no bloquear la caja por un fallo externo.
+            return 0
 
     @staticmethod
     def obtener_estado_actual():
@@ -27,13 +48,17 @@ class ServicioCaja:
             "fecha": m.fecha_movimiento.isoformat()
         } for m in movimientos_db]
 
+        # 🔥 Calculamos los pedidos pendientes para enviarlos al Frontend
+        pedidos_pendientes = ServicioCaja.contar_pedidos_pendientes()
+
         return {
             "isOpen": True,
             "sesion": {
-                "id": caja_actual.id_caja,  # <--- ¡CRÍTICO! Retorna el INT puro (ej: 1) no "ses-1"
+                "id": caja_actual.id_caja,  # <--- ¡CRÍTICO! Retorna el INT puro
                 "estado_caja": caja_actual.estado_caja,
                 "abiertaEn": caja_actual.fecha_apertura.isoformat(),
-                "montoInicial": float(caja_actual.monto_inicial)
+                "montoInicial": float(caja_actual.monto_inicial),
+                "pedidosPendientes": pedidos_pendientes # <--- NUEVO DATO PARA EL JS
             },
             "ventas": ventas_formato,
             "movimientos": movimientos_formato
@@ -53,6 +78,10 @@ class ServicioCaja:
         caja_actual = RepositorioCaja.obtener_caja_abierta()
         if not caja_actual:
             raise ValueError("No hay ninguna caja abierta para cerrar.")
+        
+        # 🔥 EL CANDADO DEL BACKEND: Evita que cierren a la fuerza
+        if ServicioCaja.contar_pedidos_pendientes() > 0:
+            raise ValueError("No se puede cerrar la caja. Hay pedidos pendientes por cobrar en las mesas.")
         
         RepositorioCaja.cerrar_caja(caja_actual, monto_real)
         return {"isOpen": False, "mensaje": "Caja cerrada correctamente."}

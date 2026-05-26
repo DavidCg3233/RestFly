@@ -6,12 +6,11 @@ class RepositorioCaja:
     @staticmethod
     def obtener_caja_abierta():
         """Retorna la sesión de caja actualmente abierta, si existe (case-insensitive)."""
-        # Usamos __iexact por si en la BD se guardó 'Abierta' o 'ABIERTA'
         return Caja.objects.filter(estado_caja__iexact='abierta').first()
 
     @staticmethod
     def crear_caja(monto_inicial, id_usuario):
-        """Abre una nueva caja asegurando enteros limpian en las FK."""
+        """Abre una nueva caja asegurando enteros limpios en las FK."""
         caja = Caja(
             monto_inicial=monto_inicial,
             estado_caja='abierta',

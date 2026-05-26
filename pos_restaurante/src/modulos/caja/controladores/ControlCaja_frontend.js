@@ -272,6 +272,12 @@
     };
 
     window.abrirModalCierre = () => {
+        // 🔥 NUEVOS CANDADOS FRONTEND: Evitamos abrir el modal si hay pedidos pendientes en las mesas
+        if (window.estadoCaja.sesion && window.estadoCaja.sesion.pedidosPendientes > 0) {
+            alert(`⚠️ No puedes cerrar la caja. Tienes ${window.estadoCaja.sesion.pedidosPendientes} pedido(s) pendiente(s) por cobrar en las mesas.`);
+            return; // Detiene por completo la ejecución
+        }
+
         // 1. Buscamos el elemento correctamente sin el typo
         const spanEsperado = document.getElementById("cierre-esperado");
         
