@@ -53,11 +53,13 @@ class ServicioInventario:
         return resultado
 
     @staticmethod
-    def registrar_plato(datos):
+    def registrar_o_actualizar_plato(datos):
+        # Capturamos el ID si existe (el front debe enviarlo al editar)
+        id_plato = datos.get('id')
         nombre = datos.get('nombre')
         precio = datos.get('precio')
         
-        # Validación temprana de campos obligatorios
+        # Validación temprana
         if not nombre or precio is None:
             raise ValueError("Faltan datos obligatorios: 'nombre' o 'precio' en el JSON.")
 
@@ -69,8 +71,13 @@ class ServicioInventario:
         
         ingredientes = datos.get('receta', [])
         
-        # Validación temprana de receta vacía
         if not ingredientes:
             raise ValueError("El plato no tiene ingredientes en la llave 'receta'.")
 
-        RepositorioInventario.crear_plato_con_receta(datos_plato, ingredientes)
+        # 🔥 LA MAGIA DE DECISIÓN
+        if id_plato:
+            RepositorioInventario.actualizar_plato_con_receta(id_plato, datos_plato, ingredientes)
+            return "Plato y receta actualizados correctamente."
+        else:
+            RepositorioInventario.crear_plato_con_receta(datos_plato, ingredientes)
+            return "Plato y receta creados correctamente."

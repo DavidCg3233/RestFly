@@ -66,3 +66,42 @@ class RepositorioInventario:
         
         Receta.objects.bulk_create(recetas)
         return plato
+    
+    @staticmethod
+    @transaction.atomic
+    def actualizar_plato_con_receta(id_plato, datos_plato, ingredientes_data):
+        # 1. Buscar y actualizar el Plato
+        try:
+            plato = Producto.objects.get(id_producto=id_plato)
+        except Producto.DoesNotExist:
+            raise ValueError(f"El plato con ID {id_plato} no existe.")
+
+        categoria, _ = CategoriaProducto.objects.get_or_create(nombre_categoria=datos_plato['categoria'])
+        
+        plato.nombre_producto = datos_plato['nombre']
+        plato.precio = datos_plato['precio']
+        plato.id_categoria = categoria
+        plato.save()
+
+        # 2. ELIMINAR la receta anterior (¡Esto soluciona el problema de los ingredientes que no se borran!)
+        Receta.objects.filter(id_plato=plato).delete()
+
+        # 3. Construir y guardar la nueva receta
+        recetas = []
+        for ing in ingredientes_data:
+            id_insumo = ing.get('idInsumo')
+            cantidad = ing.get('cantidad')
+
+            if id_insumo is None or cantidad is None:
+                raise ValueError(f"Faltan 'idInsumo' o 'cantidad' en el ingrediente: {ing}")
+
+            recetas.append(
+                Receta(
+                    id_plato=plato,
+                    id_insumo_id=id_insumo,
+                    cantidad=cantidad
+                )
+            )
+        
+        Receta.objects.bulk_create(recetas)
+        return plato

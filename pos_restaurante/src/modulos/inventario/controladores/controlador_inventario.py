@@ -35,12 +35,16 @@ class ControladorInventario:
                 print(f"❌ ERROR GET PLATOS: {str(e)}")
                 return JsonResponse({"estado": "error", "mensaje": str(e)}, status=500)
 
-        elif request.method == 'POST':
+        # Aceptamos POST (crear) y PUT (editar)
+        elif request.method in ['POST', 'PUT']:
             try:
                 body = json.loads(request.body)
                 print(f"📩 PAYLOAD RECIBIDO EN PLATOS: {body}")
-                ServicioInventario.registrar_plato(body)
-                return JsonResponse({"estado": "exitoso", "mensaje": "Plato y receta guardados correctamente."})
+                
+                # Llamamos al nuevo método del servicio
+                mensaje = ServicioInventario.registrar_o_actualizar_plato(body)
+                
+                return JsonResponse({"estado": "exitoso", "mensaje": mensaje})
             except Exception as e:
-                print(f"❌ ERROR POST PLATOS: {str(e)}")
+                print(f"❌ ERROR POST/PUT PLATOS: {str(e)}")
                 return JsonResponse({"estado": "error", "mensaje": str(e)}, status=400)

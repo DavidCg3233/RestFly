@@ -488,7 +488,8 @@
     };
 
     window.quitarInsumoReceta = function(idInsumo) {
-        window.recetaTemporal = window.recetaTemporal.filter(r => r.idInsumo !== idInsumo);
+        // Convertimos ambos a String para evitar el choque de tipos (Número vs Texto)
+        window.recetaTemporal = window.recetaTemporal.filter(r => String(r.idInsumo) !== String(idInsumo));
         renderRecetaTemporal();
     };
 
