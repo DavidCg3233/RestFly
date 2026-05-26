@@ -144,10 +144,10 @@ class RepositorioFacturacion:
 
     @staticmethod
     def obtener_pedido_por_id(id_pedido):
-        """Retorna (id_pedido, nombre_estado) o None si no existe."""
+        """Retorna (id_pedido, nombre_estado, id_mesa) o None si no existe."""
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT p.id_pedido, ep.nombre_estado_pedido
+                SELECT p.id_pedido, ep.nombre_estado_pedido, p.id_mesa
                 FROM pedido p
                 INNER JOIN estado_pedido ep ON p.id_estado_pedido = ep.id_estado_pedido
                 WHERE p.id_pedido = %s
@@ -243,3 +243,14 @@ class RepositorioFacturacion:
                 VALUES (%s, %s, %s, %s, %s)
             """, [id_venta, numero, id_tipo_comprobante, nombre_cliente, nit_cliente])
         return numero
+    
+    @staticmethod
+    def actualizar_estado_mesa(id_mesa, nombre_estado):
+        """Cambia el estado de una mesa al nombre especificado (ej. 'limpieza')."""
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE mesa m
+                INNER JOIN estado_mesa em ON em.nombre_estado_mesa = %s
+                SET m.id_estado_mesa = em.id_estado_mesa
+                WHERE m.id_mesa = %s
+            """, [nombre_estado, id_mesa])
