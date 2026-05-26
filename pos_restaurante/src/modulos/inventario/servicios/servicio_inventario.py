@@ -104,3 +104,11 @@ class ServicioInventario:
         else:
             RepositorioInventario.crear_plato_con_receta(datos_plato, ingredientes)
             return "Plato y receta creados correctamente."
+        
+    @staticmethod
+    def eliminar_plato(id_plato):
+        if not id_plato:
+            raise ValueError("Se requiere el ID del plato para eliminar.")
+        
+        # ✅ RETORNA DIRECTAMENTE LO QUE DEVUELVE EL REPOSITORIO
+        return RepositorioInventario.eliminar_plato(id_plato)
