@@ -174,3 +174,17 @@ class ServicioMesas:
             
         RepositorioMesas.eliminar_mesa(id_mesa)
         return True
+    
+    @staticmethod
+    def anular_pedido_y_liberar_mesa(datos):
+        id_mesa = datos.get('id_mesa')
+        id_pedido = datos.get('id_pedido')
+
+        if not id_mesa or not id_pedido:
+            raise ValueError("Falta el id_mesa o el id_pedido para realizar la anulación.")
+
+        # 1. Pasamos la mesa a estado 'libre' (ID 1)
+        RepositorioMesas.actualizar_estado_mesa(id_mesa, 1)
+        
+        # 2. Pasamos el pedido a estado 'cancelado' (ID 4)
+        RepositorioMesas.anular_pedido(id_pedido)

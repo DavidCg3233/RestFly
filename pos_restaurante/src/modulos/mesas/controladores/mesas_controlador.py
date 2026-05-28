@@ -1,7 +1,10 @@
 import json
+import re  # 🔥 NUEVA IMPORTACIÓN PARA LIMPIAR LETRAS
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from ..servicios.servicio_mesas import ServicioMesas
+from django.db import transaction
+from ..repositorios.repositorio_mesas import RepositorioMesas
 
 class ControladorMesas:
     
@@ -77,3 +80,52 @@ class ControladorMesas:
                 if "foreign key constraint" in str(e).lower():
                     return JsonResponse({"estado": "error", "mensaje": "No puedes eliminar una mesa que tiene pedidos registrados."}, status=400)
                 return JsonResponse({"estado": "error", "mensaje": str(e)}, status=400)
+            
+    
+    @staticmethod
+    @csrf_exempt
+    def manejar_anular_pedido(request):
+        if request.method != 'POST':
+            return JsonResponse({'estado': 'error', 'mensaje': 'Método no permitido'}, status=405)
+
+        try:
+            data = json.loads(request.body)
+            
+            # Limpiamos los IDs de cualquier letra proveniente del frontend
+            id_mesa_crudo = str(data.get('id_mesa', ''))
+            id_pedido_crudo = str(data.get('id_pedido', ''))
+            
+            id_mesa = re.sub(r'\D', '', id_mesa_crudo)
+            id_pedido = re.sub(r'\D', '', id_pedido_crudo)
+
+            if not id_mesa or not id_pedido:
+                return JsonResponse({'estado': 'error', 'mensaje': 'Faltan parámetros requeridos o son inválidos.'}, status=400)
+
+            # 🛡️ BLOQUE ATÓMICO: Evita datos inconsistentes si el servidor se apaga a mitad del proceso
+            with transaction.atomic():
+                # 1. CANCELAR EL PEDIDO EN BD (id_estado_pedido = 4)
+                RepositorioMesas.anular_pedido(id_pedido)
+
+                # 2. LIBERAR LA MESA EN BD (id_estado_mesa = 1)
+                RepositorioMesas.actualizar_estado_mesa(id_mesa, 1)
+
+            return JsonResponse({
+                'estado': 'exitoso',
+                'mensaje': 'Pedido anulado y mesa liberada correctamente.',
+                'data': {
+                    'id_mesa': id_mesa,
+                    'id_pedido': id_pedido
+                }
+            })
+
+        except Exception as e:
+            import traceback
+            print(f"❌ ERROR POST ANULAR PEDIDO: {str(e)}")
+            print("👇 --- DETALLE DEL ERROR --- 👇")
+            print(traceback.format_exc())
+            print("👆 -------------------------- 👆")
+            
+            return JsonResponse({
+                'estado': 'error',
+                'mensaje': f'Error interno en el servidor: {str(e)}'
+            }, status=500)

@@ -13,8 +13,8 @@ class RepositorioMesas:
     @staticmethod
     def obtener_mesas_y_estados():
         with connection.cursor() as cursor:
-            # Sincronizamos para traer pedidos que NO estén finalizados (ej: terminados/cancelados)
-            # Cambié el filtro estricto por un IN con estados activos en cocina/mesa
+            # 🔥 EL FIX: Solo traemos pedidos Abiertos (1) o Enviados (2). 
+            # Excluimos el 3 (Pagado) y 4 (Cancelado).
             query = """
                 SELECT
                     m.id_mesa, m.numero_mesa, m.capacidad, em.nombre_estado_mesa,
@@ -22,7 +22,7 @@ class RepositorioMesas:
                 FROM mesa m
                 INNER JOIN estado_mesa em ON m.id_estado_mesa = em.id_estado_mesa
                 LEFT JOIN pedido p ON m.id_mesa = p.id_mesa 
-                    AND p.id_estado_pedido IN (1, 2, 3) -- 1: Abierto, 2: En cocina, 3: Listo (Ajustar IDs si varían)
+                    AND p.id_estado_pedido IN (1, 2) 
             """
             cursor.execute(query)
             return RepositorioMesas.dictfetchall(cursor)
@@ -117,3 +117,11 @@ class RepositorioMesas:
             # Nota: Si la mesa tiene pedidos asociados, la BD podría bloquear 
             # el borrado por seguridad (llaves foráneas). ¡Eso es bueno!
             cursor.execute("DELETE FROM mesa WHERE id_mesa = %s", [id_mesa])
+
+    @staticmethod
+    def anular_pedido(id_pedido):
+        """Cambia el estado del pedido a 'cancelado' (ID 4)"""
+        with connection.cursor() as cursor:
+            # Asumiendo que 4 es tu id_estado_pedido para 'cancelado'
+            query = "UPDATE pedido SET id_estado_pedido = 4 WHERE id_pedido = %s"
+            cursor.execute(query, [id_pedido])

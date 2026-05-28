@@ -9,8 +9,8 @@ window.ESTADOS = window.ESTADOS || {
 };
 
 // OJO: Verifica si tu URL realmente termina en /api/mesas/api o si es solo /api/mesas
-window.API_BASE_URL_MESAS = 'http://127.0.0.1:8000/api/mesas/api';
-
+// Configuración limpia y estándar
+window.API_BASE_URL_MESAS = 'http://127.0.0.1:8000/api/mesas';
 // Memoria global
 var mesas = [];
 var productos = [];
@@ -305,11 +305,113 @@ window.renderBotonesEstado = function() {
     Object.keys(window.ESTADOS).forEach(key => {
         const isActive = mesa.status === key;
         const conf = window.ESTADOS[key];
+        
+        // 🚫 Ocultamos el botón "Libre" normal si la mesa está ocupada
+        if (mesa.status === 'ocupada' && key === 'libre') return;
+
         container.innerHTML += `
             <button onclick="cambiarEstadoMesa('${key}')" class="px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${isActive ? 'bg-background shadow-sm ' + conf.text : 'text-muted hover:text-foreground'}">
                 ${conf.label}
             </button>
         `;
+    });
+
+    // 🔥 EL BOTÓN ROJO DE CANCELAR PEDIDO
+    if (mesa.status === 'ocupada') {
+        container.innerHTML += `
+            <button onclick="window.anularPedidoMesa()" class="px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 ml-2 flex items-center gap-1 animate-pulse">
+                <i data-lucide="ban" class="w-3 h-3"></i> Cancelar Pedido
+            </button>
+        `;
+    }
+    
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+
+window.anularPedidoMesa = function() {
+    const mesa = mesas.find(m => m.id === state.activeMesaId);
+    if (!mesa || mesa.status !== 'ocupada') return;
+
+    const idPedidoReal = state.activeOrderId;
+    // Evitamos tocar mesas sin pedido en BD
+    if (!idPedidoReal || String(idPedidoReal).startsWith('TEMP-')) {
+        Swal.fire({ title: 'Atención', text: 'No hay un pedido real en base de datos para anular.', icon: 'warning' });
+        return;
+    }
+
+    const isDark = document.documentElement.classList.contains('dark');
+    const bgColor = isDark ? 'oklch(0.12 0 0)' : '#ffffff';
+    const textColor = isDark ? '#f8fafc' : '#0f172a';
+
+    Swal.fire({
+        title: undefined,
+        icon: undefined,
+        buttonsStyling: false,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, anular y liberar',
+        cancelButtonText: 'Regresar',
+        background: bgColor,
+        color: textColor,
+        html: `
+            <div class="flex flex-col items-center text-center">
+                <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold mb-2">¿Anular Pedido?</h2>
+                <p class="text-sm mb-6 opacity-70">Esta acción cancelará el pedido abierto (#${idPedidoReal}) y liberará la Mesa #${mesa.number} inmediatamente.</p>
+            </div>
+        `,
+        customClass: {
+            backdrop: 'bg-background/80 backdrop-blur-sm',
+            popup: 'p-8 rounded-2xl shadow-xl flex flex-col items-center max-w-sm border-2 border-red-500',
+            actions: 'flex gap-3 w-full justify-center mt-0',
+            confirmButton: 'px-6 py-2.5 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-colors shadow-sm w-full',
+            cancelButton: 'px-6 py-2.5 bg-secondary font-bold rounded-lg border border-border hover:brightness-95 transition-colors shadow-sm w-full'
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`${window.API_BASE_URL_MESAS}/anular-pedido/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id_mesa: state.activeMesaId,
+                        id_pedido: idPedidoReal
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.estado === 'exitoso') {
+                    Swal.fire({
+                        background: bgColor, color: textColor, buttonsStyling: false,
+                        timer: 1500, showConfirmButton: false,
+                        html: `
+                            <div class="flex flex-col items-center text-center">
+                                <div class="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                </div>
+                                <h2 class="text-2xl font-bold mb-1">¡Anulado con éxito!</h2>
+                                <p class="text-sm opacity-70">La mesa ya está libre.</p>
+                            </div>
+                        `,
+                        customClass: { backdrop: 'bg-background/80 backdrop-blur-sm', popup: 'p-8 rounded-2xl shadow-xl max-w-sm border-2 border-green-500' }
+                    });
+
+                    window.cerrarModalPedido();
+                    window.initMesas(); // Recarga mapa de mesas de la BD
+                } else {
+                    Swal.fire({ title: 'Error', text: data.mensaje, icon: 'error', background: bgColor, color: textColor });
+                }
+            } catch (error) {
+                console.error("❌ Error en red al anular:", error);
+                Swal.fire({ title: 'Error de conexión', text: 'No se pudo procesar la anulación.', icon: 'error', background: bgColor, color: textColor });
+            }
+        }
     });
 };
 
