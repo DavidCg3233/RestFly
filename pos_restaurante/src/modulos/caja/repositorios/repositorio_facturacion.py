@@ -254,3 +254,18 @@ class RepositorioFacturacion:
                 SET m.id_estado_mesa = em.id_estado_mesa
                 WHERE m.id_mesa = %s
             """, [nombre_estado, id_mesa])
+
+    @staticmethod
+    def obtener_productos_por_pedido(id_pedido):
+        """
+        Busca todos los productos y cantidades de un pedido.
+        Filtra y omite los platos que el mesero haya cancelado.
+        """
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT dp.id_producto, dp.cantidad
+                FROM detalle_pedido dp
+                INNER JOIN estado_detalle_pedido edp ON dp.id_estado_detalle = edp.id_estado_detalle
+                WHERE dp.id_pedido = %s AND edp.nombre_estado_detalle != 'cancelado'
+            """, [id_pedido])
+            return cursor.fetchall()

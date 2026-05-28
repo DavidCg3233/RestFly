@@ -34,7 +34,7 @@ class ServicioCocina:
                 }
             
             # JS espera categorías en minúsculas ('cocina' o 'bar')
-            categoria_js = str(row['nombre_area']).lower()
+            categoria_js = str(row['nombre_categoria']).lower()
 
             # Agregamos el ítem al pedido
             pedidos_dict[id_pedido]['items'].append({

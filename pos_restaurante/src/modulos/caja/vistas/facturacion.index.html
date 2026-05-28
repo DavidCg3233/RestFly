@@ -433,7 +433,6 @@
         });
     };
 
-// REEMPLAZA TU FUNCIÓN PROCESAR PAGO POR ESTA:
     window.procesarPago = async function() {
         if (!estado.selectedOrderId) return;
         const order = estado.pedidosActivos.find(o => o.id === estado.selectedOrderId);
@@ -459,14 +458,21 @@
             const result = await response.json();
 
             if (result.estado === "exitoso") {
-                // 1. Cerramos el modal donde se selecciona el método de pago
+                // 1. Cerramos el modal
                 window.cerrarModalPago();
                 
-                // 2. 🚀 Lanza la magia de la simulación del Ticket en pantalla
+                // 2. 🚀 Lanza la magia de la simulación del Ticket
                 window.mostrarTicketSimulado(order, result.data); 
                 
-                // 3. Recargamos los datos del módulo en segundo plano
+                // 3. Recargamos los datos de facturación
                 await window.initFacturacion(); 
+
+                // 💥 4. EL PUENTE DE MAGIA: Avisamos al inventario que baje el stock visualmente
+                if (typeof window.forzarSincronizacionInventario === "function") {
+                    console.log("Avisando al inventario desde facturación...");
+                    window.forzarSincronizacionInventario();
+                }
+
             } else {
                 alert(`Error: ${result.mensaje}`);
             }
@@ -488,15 +494,21 @@
     // Función encargada de armar el diseño interno del ticket de papel
     window.mostrarTicketSimulado = function(order, dataBackend) {
         const nComprobante = dataBackend?.numero_comprobante || "N/A";
-        const subtotal = order.total;
-        const iva = subtotal * estado.taxRate;
-        const totalNeto = subtotal + iva;
+        
+        // --- 💥 CORRECCIÓN MATEMÁTICA AQUÍ 💥 ---
+        const totalCobrado = order.total; // Lo que paga el cliente en la caja (ej: 20.000)
+        
+        // Desarmamos el total para sacar el subtotal real y el impuesto
+        const subtotal = totalCobrado / (1 + estado.taxRate); 
+        const iva = totalCobrado - subtotal;
+        // ----------------------------------------
+
         const nombreMesero = order.waiter || order.mesero || 'Barra';
 
         // Estructura limpia de ticket clásico de restaurante
         const HTMLTicketInterno = `
             <div style="text-align: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; font-size: 14px; font-weight: bold; uppercase">RESTFLY RESTAURANTE</h3>
+                <h3 style="margin: 0; font-size: 14px; font-weight: bold; text-transform: uppercase;">RESTFLY RESTAURANTE</h3>
                 <p style="margin: 2px 0;">NIT: 901.234.567-1</p>
                 <p style="margin: 2px 0;">SANTANDER DE QUILICHAO</p>
                 <p style="margin: 4px 0; font-weight: bold;">COMPROBANTE DE VENTA</p>
@@ -522,7 +534,7 @@
                     ${order.items.map(item => `
                         <tr>
                             <td style="padding: 2px 0;">${item.quantity}x ${item.name}</td>
-                            <td style="text-align: right; valign: top;">$${(item.price * item.quantity).toFixed(2)}</td>
+                            <td style="text-align: right; vertical-align: top;">$${(item.price * item.quantity).toFixed(2)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -530,9 +542,9 @@
             
             <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
             <div style="font-size: 11px; text-align: right; line-height: 1.4;">
-                <p style="margin: 0;">Subtotal: $${subtotal.toFixed(2)}</p>
-                <p style="margin: 0;">IVA (${(estado.taxRate * 100)}%): $${iva.toFixed(2)}</p>
-                <p style="margin: 4px 0 0 0; font-size: 13px; font-weight: bold;">TOTAL COBRADO: $${totalNeto.toFixed(2)}</p>
+                <p style="margin: 0;">Subtotal (Sin Imp.): $${subtotal.toFixed(2)}</p>
+                <p style="margin: 0;">Impuesto (${(estado.taxRate * 100).toFixed(0)}%): $${iva.toFixed(2)}</p>
+                <p style="margin: 4px 0 0 0; font-size: 13px; font-weight: bold;">TOTAL COBRADO: $${totalCobrado.toFixed(2)}</p>
             </div>
             <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
             <div style="text-align: center; font-size: 10px;">

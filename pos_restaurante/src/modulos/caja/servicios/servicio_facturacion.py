@@ -2,7 +2,7 @@
 
 from django.db import transaction
 from ..repositorios.repositorio_facturacion import RepositorioFacturacion
-
+from src.modulos.inventario.servicios.servicio_inventario import ServicioInventario
 
 class ServicioFacturacion:
 
@@ -37,10 +37,9 @@ class ServicioFacturacion:
         if not pedido:
             raise ValueError(f"El pedido #{id_pedido} no existe.")
 
-        # 🔥 AQUÍ EXTRAEMOS EL ID DE LA MESA
         _, estado_actual, id_mesa = pedido
         
-        if estado_actual == "pagado":
+        if estado_actual == "pagado":   
             raise ValueError("Este pedido ya fue cobrado anteriormente.")
         if estado_actual == "cancelado":
             raise ValueError("No se puede cobrar un pedido cancelado.")
@@ -57,7 +56,7 @@ class ServicioFacturacion:
         iva           = round(subtotal * ServicioFacturacion.TAX_RATE, 2)
         total_con_iva = round(subtotal + iva, 2)
 
-        # -- Transacción atómica -----------------------------------
+        # -- Transacción atómica (Todo o Nada) ---------------------
         with transaction.atomic():
             # 1. Registrar la venta
             id_venta = RepositorioFacturacion.crear_venta(
@@ -87,9 +86,17 @@ class ServicioFacturacion:
                 id_tipo_comprobante=id_tipo_ticket
             )
 
-            # 5. 🔥 MAGIA: PASAR LA MESA A LIMPIEZA
-            # Nota: Asegúrate de que en tu tabla 'estado_mesa' se llame exactamente 'limpieza'
+            # 5. PASAR LA MESA A LIMPIEZA
             RepositorioFacturacion.actualizar_estado_mesa(id_mesa, "en_limpieza")
+
+            # =========================================================
+            # 🔥 6. SISTEMA AUTOMÁTICO DE MERMA DE INVENTARIO 🔥
+            # =========================================================
+            productos_vendidos = RepositorioFacturacion.obtener_productos_por_pedido(id_pedido)
+            for id_producto, cantidad in productos_vendidos:
+                # El inventario se encargará de buscar la receta y restar las porciones exactas
+                ServicioInventario.procesar_venta_plato(id_producto, cantidad)
+
         return {
             "id_venta":           id_venta,
             "numero_comprobante": numero_comprobante,

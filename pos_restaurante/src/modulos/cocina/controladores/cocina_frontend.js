@@ -104,9 +104,14 @@ function renderKanban() {
     if (!container) return;
     
     const visibleOrders = estadoCocina.orders.filter(o => {
-        if (estadoCocina.view === "cocina") return o.items.some(i => i.category === "cocina");
-        if (estadoCocina.view === "bar") return o.items.some(i => i.category === "bar");
-        return true;
+        // 🔥 CORRECCIÓN: Filtramos usando tus categorías reales de la BD
+        if (estadoCocina.view === "cocina") {
+            return o.items.some(i => ["comida", "comidas rápidas", "postre"].includes(i.category));
+        }
+        if (estadoCocina.view === "bar") {
+            return o.items.some(i => i.category === "bebida");
+        }
+        return true; // Vista 'all' (Muestra todo junto)
     });
 
     let kanbanHtml = '';
@@ -137,19 +142,28 @@ function renderKanban() {
 function generarTarjetaHtml(order, config, status) {
     const currentIdx = STATUS_FLOW.indexOf(status);
     
-    // Asume que order.createdAt viene del backend en un formato parseable (ej. ISO 8601)
     const orderDate = new Date(order.createdAt);
-    // Prevención de error si la fecha es inválida
     const msDiff = isNaN(orderDate.getTime()) ? 0 : (Date.now() - orderDate.getTime());
     const mins = Math.floor(msDiff / 60000);
     
     const timeColor = mins > 20 && status !== "entregado" ? "text-destructive" : "text-muted";
 
-    const itemsHtml = order.items.map(item => {
-        const dotColor = item.category === "cocina" ? "bg-primary" : "bg-blue-400";
-        const isMuted = (estadoCocina.view === "cocina" && item.category !== "cocina") || 
-                        (estadoCocina.view === "bar" && item.category !== "bar");
-        return `<div class="flex items-center gap-2 ${isMuted ? "opacity-30 line-through" : ""}">
+    // 🔥 LA MAGIA ESTÁ AQUÍ: Filtramos los ítems exactos antes de dibujarlos
+    const itemsParaMostrar = order.items.filter(item => {
+        if (estadoCocina.view === "cocina") {
+            return ["comida", "comidas rápidas", "postre"].includes(item.category);
+        }
+        if (estadoCocina.view === "bar") {
+            return item.category === "bebida";
+        }
+        return true; // Si está en vista "Todas", deja pasar todo
+    });
+
+    // Ahora solo dibujamos los ítems que sobrevivieron al filtro (sin clases raras de tachado)
+    const itemsHtml = itemsParaMostrar.map(item => {
+        const dotColor = item.category === "bebida" ? "bg-blue-400" : "bg-primary";
+        
+        return `<div class="flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
             <span class="text-foreground text-sm"><span class="font-semibold">${item.quantity}x</span> ${item.name}</span>
             ${item.notes ? `<span class="text-xs text-muted italic ml-auto">(${item.notes})</span>` : ''}

@@ -346,6 +346,13 @@
         }
     };
 
+    // 🔥 NUEVO: Puente de comunicación para el módulo de Caja
+    window.forzarSincronizacionInventario = async function() {
+        console.log("⚡ Venta detectada. Refrescando el stock en tiempo real...");
+        await cargarInsumosBackend(); // Solo recargamos insumos, los platos no cambian por una venta
+        actualizarVista();            // Volvemos a pintar las alertas y la tabla
+    };
+
     window.filtrarInventario = function() {
         const searchInput = document.getElementById("inv-search");
         if (searchInput) {

@@ -112,3 +112,16 @@ class ServicioInventario:
         
         # ✅ RETORNA DIRECTAMENTE LO QUE DEVUELVE EL REPOSITORIO
         return RepositorioInventario.eliminar_plato(id_plato)
+    
+    @staticmethod
+    def procesar_venta_plato(id_plato, cantidad_vendida):
+        """
+        Punto de acceso seguro para que otros módulos soliciten la merma de stock.
+        """
+        try:
+            RepositorioInventario.descontar_stock_por_venta(id_plato, cantidad_vendida)
+            return True
+        except Exception as e:
+            # Captura el error en consola pero no tumba la experiencia del usuario o la caja
+            print(f"⚠️ Error crítico al mermar stock del plato ID {id_plato}: {str(e)}")
+            return False

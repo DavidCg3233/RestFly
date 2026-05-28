@@ -205,3 +205,34 @@ class RepositorioInventario:
                     prod.id_categoria = cat
                     
             prod.save()
+    
+    @staticmethod
+    def descontar_stock_por_venta(id_plato, cantidad_vendida):
+        """
+        Busca la receta del plato vendido y resta del inventario la cantidad proporcional.
+        Ecuación: Stock Nuevo = Stock Actual - (Cantidad en Receta * Cantidad Vendida)
+        """
+        from django.db import transaction
+        from ..modelos.inventario_modelo import Receta, Inventario
+
+        # Nos aseguramos de que corra de manera segura en la base de datos
+        with transaction.atomic():
+            # 1. Traemos los insumos y porciones que componen este plato específico
+            receta_items = Receta.objects.filter(id_plato_id=id_plato).select_related('id_insumo__id_producto')
+            
+            for item in receta_items:
+                # 2. ECUACIÓN DE MERMA: Multiplicamos lo que gasta 1 plato por los platos vendidos
+                cantidad_a_mermar = float(item.cantidad) * float(cantidad_vendida)
+                
+                # 3. Bloqueamos el registro del insumo (Fila de la BD) para evitar desfases numéricos
+                insumo = Inventario.objects.select_for_update().get(id_inventario=item.id_insumo_id)
+                
+                # 4. Restamos el proporcional al stock actual
+                insumo.stock_actual = float(insumo.stock_actual) - cantidad_a_mermar
+                insumo.save()
+                
+                # 5. LÓGICA DE INSUMO BAJO: Si el stock actual es menor o igual al mínimo, avisamos
+                if insumo.stock_actual <= insumo.stock_minimo:
+                    print(f"🚨 ALERT_INVENTARIO_BAJO -> El insumo '{insumo.id_producto.nombre_producto}' "
+                            f"alcanzó un nivel crítico. Stock actual: {insumo.stock_actual} {insumo.unidad_medida} "
+                            f"(Mínimo requerido: {insumo.stock_minimo})")

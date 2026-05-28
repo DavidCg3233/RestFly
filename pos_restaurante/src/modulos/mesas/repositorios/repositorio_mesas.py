@@ -1,5 +1,3 @@
-# C:\Users\Administrador\Desktop\POS RESTAURANTE\RestFly\pos_restaurante\src\modulos\mesas\repositorios\repositorio_mesas.py
-
 from django.db import connection
 
 class RepositorioMesas:
@@ -13,8 +11,8 @@ class RepositorioMesas:
     @staticmethod
     def obtener_mesas_y_estados():
         with connection.cursor() as cursor:
-            # 🔥 EL FIX: Solo traemos pedidos Abiertos (1) o Enviados (2). 
-            # Excluimos el 3 (Pagado) y 4 (Cancelado).
+            # Traemos los pedidos en estado Abierto (1) o Enviado (2)
+            # Y excluimos por completo las mesas con estado 'eliminada'
             query = """
                 SELECT
                     m.id_mesa, m.numero_mesa, m.capacidad, em.nombre_estado_mesa,
@@ -23,6 +21,7 @@ class RepositorioMesas:
                 INNER JOIN estado_mesa em ON m.id_estado_mesa = em.id_estado_mesa
                 LEFT JOIN pedido p ON m.id_mesa = p.id_mesa 
                     AND p.id_estado_pedido IN (1, 2) 
+                WHERE em.nombre_estado_mesa != 'eliminada'
             """
             cursor.execute(query)
             return RepositorioMesas.dictfetchall(cursor)
@@ -30,8 +29,6 @@ class RepositorioMesas:
     @staticmethod
     def obtener_productos_menu():
         with connection.cursor() as cursor:
-            # Iván, aquí agregamos el id_estado_producto y la descripción real
-            # Traemos sólo los que NO estén inactivos (Activo = 1, Agotado = 2 por ejemplo)
             query = """
                 SELECT
                     p.id_producto, p.nombre_producto, p.descripcion, p.precio,
@@ -39,7 +36,7 @@ class RepositorioMesas:
                 FROM producto p
                 INNER JOIN categoria_producto c ON p.id_categoria = c.id_categoria
                 INNER JOIN estado_producto ep ON p.id_estado_producto = ep.id_estado_producto
-                WHERE ep.nombre_estado_producto != 'inactivo' -- Excluimos borrados lógicos
+                WHERE ep.nombre_estado_producto != 'inactivo'
             """
             cursor.execute(query)
             return RepositorioMesas.dictfetchall(cursor)
@@ -63,24 +60,56 @@ class RepositorioMesas:
             query = "UPDATE mesa SET id_estado_mesa = %s WHERE id_mesa = %s"
             cursor.execute(query, [id_estado_mesa, id_mesa])
 
-    # 👉 AGREGA ESTE NUEVO MÉTODO AQUÍ:
     @staticmethod
     def crear_mesa(numero_mesa, capacidad):
         """
-        Inserta de manera directa una nueva mesa en la base de datos de MySQL
-        con estado inicial 'libre' (ID 1).
+        🛡️ CREACIÓN INTELIGENTE: Crea la mesa o la reactiva si ya existía 
+        en el historial de 'eliminadas', respetando la restricción UNIQUE.
         """
         with connection.cursor() as cursor:
-            query = """
-                INSERT INTO mesa (numero_mesa, capacidad, id_estado_mesa)
-                VALUES (%s, %s, 1)
+            # 1. Verificar si la mesa ya existe físicamente en la base de datos
+            query_verificar = """
+                SELECT m.id_mesa, em.nombre_estado_mesa 
+                FROM mesa m
+                INNER JOIN estado_mesa em ON m.id_estado_mesa = em.id_estado_mesa
+                WHERE m.numero_mesa = %s 
+                LIMIT 1
             """
-            cursor.execute(query, [numero_mesa, capacidad])
+            cursor.execute(query_verificar, [numero_mesa])
+            row = cursor.fetchone()
+            
+            if row:
+                id_mesa, nombre_estado = row
+                
+                if nombre_estado == 'eliminada':
+                    # 🔥 ¡RESURRECCIÓN! La mesa existía en el historial oculta. 
+                    # La volvemos a activar ('libre') y actualizamos su capacidad por si cambió.
+                    query_reactivar = """
+                        UPDATE mesa 
+                        SET id_estado_mesa = (SELECT id_estado_mesa FROM estado_mesa WHERE nombre_estado_mesa = 'libre' LIMIT 1),
+                            capacidad = %s
+                        WHERE id_mesa = %s
+                    """
+                    cursor.execute(query_reactivar, [capacidad, id_mesa])
+                    return True
+                else:
+                    # La mesa ya está activa en el restaurante (libre, ocupada, etc.)
+                    # Lanzamos un error controlado para que el backend lo responda adecuadamente
+                    raise ValueError(f"La mesa número {numero_mesa} ya está activa en el sistema.")
+            
+            # 2. Si la mesa nunca ha existido en la historia del software, se crea desde cero
+            query_insertar = """
+                INSERT INTO mesa (numero_mesa, capacidad, id_estado_mesa)
+                VALUES (
+                    %s, %s, 
+                    (SELECT id_estado_mesa FROM estado_mesa WHERE nombre_estado_mesa = 'libre' LIMIT 1)
+                )
+            """
+            cursor.execute(query_insertar, [numero_mesa, capacidad])
             return True
     
     @staticmethod
     def obtener_pedido_abierto_por_mesa(id_mesa):
-        """Busca si la mesa ya tiene una orden abierta (estado 1)"""
         with connection.cursor() as cursor:
             query = "SELECT id_pedido FROM pedido WHERE id_mesa = %s AND id_estado_pedido = 1 LIMIT 1"
             cursor.execute(query, [id_mesa])
@@ -89,7 +118,6 @@ class RepositorioMesas:
 
     @staticmethod
     def crear_pedido(id_mesa, id_usuario):
-        """Crea el registro principal del pedido en estado 'abierto' (1)"""
         with connection.cursor() as cursor:
             query = """
                 INSERT INTO pedido (id_mesa, id_usuario, id_estado_pedido)
@@ -101,7 +129,6 @@ class RepositorioMesas:
 
     @staticmethod
     def agregar_detalles_pedido(id_pedido, items):
-        """Inserta cada plato del pedido en la BD con estado 'pendiente' (1) para cocina"""
         with connection.cursor() as cursor:
             query = """
                 INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, id_estado_detalle)
@@ -112,16 +139,45 @@ class RepositorioMesas:
     
     @staticmethod
     def eliminar_mesa(id_mesa):
-        """Elimina una mesa por su ID en la base de datos"""
+        """🛡️ BORRADO LÓGICO INTELIGENTE: Busca o crea el estado 'eliminada' dinámicamente."""
         with connection.cursor() as cursor:
-            # Nota: Si la mesa tiene pedidos asociados, la BD podría bloquear 
-            # el borrado por seguridad (llaves foráneas). ¡Eso es bueno!
-            cursor.execute("DELETE FROM mesa WHERE id_mesa = %s", [id_mesa])
+            # Buscamos si existe el estado 'eliminada'
+            cursor.execute("SELECT id_estado_mesa FROM estado_mesa WHERE nombre_estado_mesa = 'eliminada' LIMIT 1")
+            row = cursor.fetchone()
+            
+            if row:
+                id_estado = row[0]
+            else:
+                # Si no existe en los catálogos, lo insertamos al vuelo para proteger la integridad
+                cursor.execute("INSERT INTO estado_mesa (nombre_estado_mesa) VALUES ('eliminada')")
+                cursor.execute("SELECT LAST_INSERT_ID()")
+                id_estado = cursor.fetchone()[0]
+            
+            # Executamos el borrado lógico seguro
+            cursor.execute("UPDATE mesa SET id_estado_mesa = %s WHERE id_mesa = %s", [id_estado, id_mesa])
 
     @staticmethod
     def anular_pedido(id_pedido):
-        """Cambia el estado del pedido a 'cancelado' (ID 4)"""
+        """🛡️ AUDITORÍA DE PEDIDO: Cambia estados a cancelado buscando dinámicamente los IDs."""
         with connection.cursor() as cursor:
-            # Asumiendo que 4 es tu id_estado_pedido para 'cancelado'
-            query = "UPDATE pedido SET id_estado_pedido = 4 WHERE id_pedido = %s"
-            cursor.execute(query, [id_pedido])
+            # 1. Buscamos el ID exacto de 'cancelado' para pedidos principales
+            cursor.execute("SELECT id_estado_pedido FROM estado_pedido WHERE nombre_estado_pedido = 'cancelado' LIMIT 1")
+            row_p = cursor.fetchone()
+            id_cancelado_pedido = row_p[0] if row_p else 4
+            
+            # 2. Buscamos o creamos el estado 'cancelado' para la cocina (detalle_pedido)
+            cursor.execute("SELECT id_estado_detalle FROM estado_detalle_pedido WHERE nombre_estado_detalle = 'cancelado' LIMIT 1")
+            row_d = cursor.fetchone()
+            
+            if row_d:
+                id_cancelado_detalle = row_d[0]
+            else:
+                cursor.execute("INSERT INTO estado_detalle_pedido (nombre_estado_detalle) VALUES ('cancelado')")
+                cursor.execute("SELECT LAST_INSERT_ID()")
+                id_cancelado_detalle = cursor.fetchone()[0]
+            
+            # 3. Aplicamos la actualización lógica al pedido principal
+            cursor.execute("UPDATE pedido SET id_estado_pedido = %s WHERE id_pedido = %s", [id_cancelado_pedido, id_pedido])
+            
+            # 4. Aplicamos la actualización a los ítems para avisar correctamente a la cocina
+            cursor.execute("UPDATE detalle_pedido SET id_estado_detalle = %s WHERE id_pedido = %s", [id_cancelado_detalle, id_pedido])
