@@ -94,7 +94,7 @@ class ServicioFacturacion:
             # =========================================================
             productos_vendidos = RepositorioFacturacion.obtener_productos_por_pedido(id_pedido)
             for id_producto, cantidad in productos_vendidos:
-                # El inventario se encargará de buscar la receta y restar las porciones exactas
+                # El inventario restará existencias (frenando en 0 si no hay stock)
                 ServicioInventario.procesar_venta_plato(id_producto, cantidad)
 
         return {

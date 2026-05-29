@@ -509,58 +509,53 @@ window.updateQty = function(prodId, delta) {
 
 window.renderPedido = function() {
     const container = document.getElementById('contenedor-pedido-items');
-    const totalEl = document.getElementById('pedido-total');
-    const pedido = pedidos.find(p => p.id === state.activeOrderId);
+    // ... tu lógica para encontrar el pedido actual ...
+    const order = pedidos.find(p => p.id === state.activeOrderId);
+    
+    if (!order || order.items.length === 0) {
+        container.innerHTML = `<p class="text-center text-muted text-sm mt-10">No hay productos en el pedido.</p>`;
+        document.getElementById('pedido-total').innerText = '$0.00';
+        return;
+    }
 
-    if (!pedido || pedido.items.length === 0) {
-        container.innerHTML = `
-            <div class="flex-1 flex flex-col items-center justify-center text-muted opacity-20 py-20">
-                <i data-lucide="shopping-bag" class="w-12 h-12 mb-2"></i>
-                <span class="text-xs font-black uppercase">Vacío</span>
-            </div>
-        `;
-        totalEl.innerText = "$0.00";
-    } else {
-        // Diccionario de colores visuales para los estados independientes
-        const badgeColores = {
-            'pendiente': 'bg-gray-500/10 text-gray-500 border-gray-500/20',
-            'en_preparacion': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-            'listo': 'bg-green-500/10 text-green-500 border-green-500/20',
-            'entregado': 'bg-transparent text-muted border-transparent opacity-50'
-        };
-
-        container.innerHTML = pedido.items.map(i => {
-            // Si es un ítem nuevo (aún no enviado), por defecto es pendiente.
-            // Si viene de la BD, lee i.status y i.category
-            const estadoItem = i.status || 'pendiente'; 
-            const areaItem = i.category || 'Cocina'; 
-            
-            const colores = badgeColores[estadoItem] || badgeColores['pendiente'];
-            const tachado = estadoItem === 'entregado' ? 'line-through' : '';
-
-            return `
-                <div class="flex items-center justify-between p-3 bg-background border border-border rounded-xl mb-2">
-                    <div class="flex-1 pr-2">
-                        <div class="flex items-center gap-2 mb-1">
-                            <p class="text-xs font-bold ${tachado}">${i.name}</p>
-                            <span class="text-[8px] uppercase font-black px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                                ${areaItem}
-                            </span>
-                        </div>
-                        <p class="text-[10px] text-primary font-mono">$${(i.price * i.qty).toFixed(2)}</p>
+    container.innerHTML = order.items.map((item, index) => {
+        // Asegurarnos de que item.notas exista, si no, lo dejamos vacío
+        const notaActual = item.notas || ''; 
+        
+        return `
+            <div class="bg-background border border-border p-3 rounded-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-sm">${item.qty}x</span>
+                        <span class="text-sm text-foreground">${item.name}</span>
                     </div>
-                    
-                    <div class="flex flex-col items-end gap-1.5">
-                        <span class="text-[8px] uppercase font-black px-2 py-0.5 rounded border ${colores}">
-                            ${estadoItem.replace('_', ' ')}
-                        </span>
-                        <span class="text-[10px] font-black bg-secondary px-2 py-1 rounded">x${i.qty}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="font-mono font-bold">$${(item.price * item.qty).toFixed(2)}</span>
+                        
+                        <button onclick="window.toggleNota('${item.prodId}')" class="text-muted hover:text-primary transition-colors">
+                            <i data-lucide="message-square-plus" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 </div>
-            `;
-        }).join('');
-        totalEl.innerText = `$${parseFloat(pedido.total).toFixed(2)}`;
-    }
+
+                <div id="nota-container-${item.prodId}" class="mt-3 transition-all duration-200" style="display: ${notaActual ? 'block' : 'none'};">
+                    <div class="flex items-center bg-secondary rounded-lg border border-border px-2">
+                        <i data-lucide="pencil" class="w-3 h-3 text-muted"></i>
+                        <input 
+                            type="text" 
+                            value="${notaActual}" 
+                            placeholder="Ej: Sin cebolla, bien cocido..." 
+                            class="w-full bg-transparent border-none text-xs p-2 text-foreground focus:outline-none focus:ring-0"
+                            onchange="window.guardarNota('${item.prodId}', this.value)"
+                        />
+                    </div>
+                </div>
+                
+                </div>
+        `;
+    }).join('');
+
+    // ... tu lógica para actualizar el total y los íconos ...
     if(typeof lucide !== 'undefined') lucide.createIcons();
 };
 
@@ -640,6 +635,38 @@ window.validarRolYNombre = function() {
         }
     } else {
         console.warn("No hay usuario en sesión.");
+    }
+};
+
+// ==========================================
+// 📝 LÓGICA DE NOTAS EN EL PEDIDO
+// ==========================================
+
+window.toggleNota = function(prodId) {
+    const contenedor = document.getElementById(`nota-container-${prodId}`);
+    if (contenedor) {
+        if (contenedor.style.display === 'none') {
+            contenedor.style.display = 'block';
+            // Enfocar automáticamente el input para escribir rápido
+            const input = contenedor.querySelector('input');
+            if(input) input.focus();
+        } else {
+            contenedor.style.display = 'none';
+        }
+    }
+};
+
+window.guardarNota = function(prodId, textoNota) {
+    // 1. Buscamos el pedido actual
+    const order = pedidos.find(p => p.id === state.activeOrderId);
+    if (!order) return;
+
+    // 2. Buscamos el ítem específico dentro de ese pedido
+    const item = order.items.find(i => i.prodId === prodId);
+    if (item) {
+        // 3. Le asignamos la nota al objeto en memoria
+        item.notas = textoNota;
+        console.log(`✅ Nota guardada para ${item.name}: ${textoNota}`);
     }
 };
 

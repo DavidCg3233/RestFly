@@ -44,9 +44,10 @@ class RepositorioMesas:
     @staticmethod
     def obtener_detalle_pedido(id_pedido):
         with connection.cursor() as cursor:
+            # 🔥 CORREGIDO: Añadimos 'dp.notas' a la lista de campos que solicitamos
             query = """
                 SELECT 
-                    dp.id_producto, pr.nombre_producto, dp.cantidad, dp.precio_unitario
+                    dp.id_producto, pr.nombre_producto, dp.cantidad, dp.precio_unitario, dp.notas
                 FROM detalle_pedido dp
                 INNER JOIN producto pr ON dp.id_producto = pr.id_producto
                 WHERE dp.id_pedido = %s
@@ -130,12 +131,21 @@ class RepositorioMesas:
     @staticmethod
     def agregar_detalles_pedido(id_pedido, items):
         with connection.cursor() as cursor:
+            # 5 Columnas: id_pedido (1), id_producto (2), cantidad (3), precio_unitario (4), id_estado_detalle (5), notas (6)
             query = """
-                INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, id_estado_detalle)
-                VALUES (%s, %s, %s, %s, 1)
+                INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, id_estado_detalle, notas)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """
             for item in items:
-                cursor.execute(query, [id_pedido, item['id_producto'], item['cantidad'], item['precio_unitario']])
+                # 6 Valores mapeados uno a uno con los %s del query
+                cursor.execute(query, [
+                    id_pedido,                      # 1
+                    item['id_producto'],            # 2
+                    item['cantidad'],               # 3
+                    item['precio_unitario'],        # 4
+                    1,                              # 5 (id_estado_detalle activo)
+                    item.get('notas', '')           # 6
+                ])
     
     @staticmethod
     def eliminar_mesa(id_mesa):

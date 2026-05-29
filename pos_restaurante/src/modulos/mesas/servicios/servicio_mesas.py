@@ -57,7 +57,9 @@ class ServicioMesas:
                         "prodId": f"prod_{d['id_producto']}",
                         "name": d['nombre_producto'],
                         "price": float(d['precio_unitario']),
-                        "qty": d['cantidad']
+                        "qty": d['cantidad'],
+                        # 👇 LE ENVIAMOS LA NOTA DE REGRESO AL FRONTEND
+                        "notas": d.get('notas', '') 
                     })
                     
                 pedidos_front.append({
@@ -69,6 +71,12 @@ class ServicioMesas:
 
         productos_front = []
         for p in productos_db:
+            estado_producto = p['nombre_estado_producto'].lower()
+            
+            # 🔥 EL GUARDIA DE SEGURIDAD: Si no está activo, lo ignoramos y pasamos al siguiente
+            if estado_producto != 'activo':
+                continue
+
             # Sincronizamos las categorías dinámicamente con tu tabla de categorías del inventario
             cat_js = p['nombre_categoria'].lower() if p['nombre_categoria'] else "cocina"
 
@@ -78,7 +86,7 @@ class ServicioMesas:
                 "desc": p['descripcion'] if p['descripcion'] else "Sin descripción disponible.",
                 "price": float(p['precio']),
                 "cat": cat_js,
-                "estado": p['nombre_estado_producto'].lower() # 'activo' o 'agotado'
+                "estado": estado_producto
             })
 
         return {
@@ -126,38 +134,34 @@ class ServicioMesas:
     
     @staticmethod
     def enviar_comanda(datos):
-        id_mesa_front = datos.get('id_mesa') # ej: "m1"
+        id_mesa_front = datos.get('id_mesa')
         id_usuario = datos.get('id_usuario', 1)
         items_front = datos.get('items', [])
 
         if not id_mesa_front or not items_front:
             raise ValueError("Faltan datos para procesar la comanda.")
 
-        # Limpiamos el ID de la mesa quitando la 'm' (ej: 'm1' -> 1)
         id_mesa = int(id_mesa_front.replace('m', ''))
-
-        # 1. Verificamos si la mesa ya tiene un pedido abierto o si creamos uno nuevo
         id_pedido = RepositorioMesas.obtener_pedido_abierto_por_mesa(id_mesa)
 
         if not id_pedido:
             id_pedido = RepositorioMesas.crear_pedido(id_mesa, id_usuario)
-            # Pasamos la mesa a estado 'ocupada' (ID 2 en tu BD)
             RepositorioMesas.actualizar_estado_mesa(id_mesa, 2)
 
-        # 2. Formateamos los platos para la BD
         detalles_bd = []
         for item in items_front:
-            # Limpiamos el ID del producto (ej: 'prod_1' -> 1)
             id_prod_front = item.get('prodId')
             id_producto = int(id_prod_front.replace('prod_', ''))
             
             detalles_bd.append({
                 'id_producto': id_producto,
                 'cantidad': item.get('qty'),
-                'precio_unitario': item.get('price')
+                'precio_unitario': item.get('price'),
+                # 👇 AQUÍ CACHAMOS LA NOTA QUE MANDAS DESDE EL JS
+                'notas': item.get('notas', '') 
             })
 
-        # 3. Guardamos los platos en la orden
+        # Tu repositorio ahora debe estar preparado para recibir 'notas' en cada diccionario
         RepositorioMesas.agregar_detalles_pedido(id_pedido, detalles_bd)
 
         return True

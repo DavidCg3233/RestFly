@@ -159,15 +159,27 @@ function generarTarjetaHtml(order, config, status) {
         return true; // Si está en vista "Todas", deja pasar todo
     });
 
-    // Ahora solo dibujamos los ítems que sobrevivieron al filtro (sin clases raras de tachado)
+    // Ahora dibujamos los ítems con el diseño exacto de la imagen
     const itemsHtml = itemsParaMostrar.map(item => {
         const dotColor = item.category === "bebida" ? "bg-blue-400" : "bg-primary";
+        const notaText = item.notes ? String(item.notes).trim() : "";
         
-        return `<div class="flex items-center gap-2">
+        // El plato principal tal cual lo tenías, pero con margen para la sangría de abajo
+        let htmlPlato = `<div class="flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
             <span class="text-foreground text-sm"><span class="font-semibold">${item.quantity}x</span> ${item.name}</span>
-            ${item.notes ? `<span class="text-xs text-muted italic ml-auto">(${item.notes})</span>` : ''}
         </div>`;
+
+        // 📝 EL DISEÑO DE LA IMAGEN: Línea vertical a la izquierda y colores tierra elegantes
+        if (notaText) {
+            htmlPlato += `
+            <div class="ml-3.5 mt-1 pl-3 border-l border-zinc-300 dark:border-zinc-700 flex items-center gap-1.5 text-amber-700/80 dark:text-amber-400/80">
+                <i data-lucide="sticky-note" class="w-4 h-4 shrink-0 opacity-80"></i>
+                <span class="text-xs font-medium">Note: ${notaText}</span>
+            </div>`;
+        }
+
+        return `<div class="mb-2 last:mb-0">${htmlPlato}</div>`;
     }).join('');
 
     let botonesHtml = `<div class="flex items-center gap-2 pt-2 border-t border-border/50">`;

@@ -205,34 +205,66 @@ class RepositorioInventario:
                     prod.id_categoria = cat
                     
             prod.save()
+
+            # 🔥 EL DISPARADOR: Sincronizar platos cuando se reabastece o edita el insumo
+            RepositorioInventario.sincronizar_estado_platos_por_insumo(id_insumo)
     
     @staticmethod
     def descontar_stock_por_venta(id_plato, cantidad_vendida):
         """
         Busca la receta del plato vendido y resta del inventario la cantidad proporcional.
-        Ecuación: Stock Nuevo = Stock Actual - (Cantidad en Receta * Cantidad Vendida)
+        Ajusta a 0 si hace falta y dispara la sincronización de estados del menú.
         """
         from django.db import transaction
         from ..modelos.inventario_modelo import Receta, Inventario
 
-        # Nos aseguramos de que corra de manera segura en la base de datos
         with transaction.atomic():
-            # 1. Traemos los insumos y porciones que componen este plato específico
             receta_items = Receta.objects.filter(id_plato_id=id_plato).select_related('id_insumo__id_producto')
             
             for item in receta_items:
-                # 2. ECUACIÓN DE MERMA: Multiplicamos lo que gasta 1 plato por los platos vendidos
                 cantidad_a_mermar = float(item.cantidad) * float(cantidad_vendida)
-                
-                # 3. Bloqueamos el registro del insumo (Fila de la BD) para evitar desfases numéricos
                 insumo = Inventario.objects.select_for_update().get(id_inventario=item.id_insumo_id)
                 
-                # 4. Restamos el proporcional al stock actual
-                insumo.stock_actual = float(insumo.stock_actual) - cantidad_a_mermar
+                nuevo_stock = float(insumo.stock_actual) - cantidad_a_mermar
+                
+                if nuevo_stock < 0:
+                    insumo.stock_actual = 0.0
+                else:
+                    insumo.stock_actual = nuevo_stock
+                
                 insumo.save()
                 
-                # 5. LÓGICA DE INSUMO BAJO: Si el stock actual es menor o igual al mínimo, avisamos
-                if insumo.stock_actual <= insumo.stock_minimo:
-                    print(f"🚨 ALERT_INVENTARIO_BAJO -> El insumo '{insumo.id_producto.nombre_producto}' "
-                            f"alcanzó un nivel crítico. Stock actual: {insumo.stock_actual} {insumo.unidad_medida} "
-                            f"(Mínimo requerido: {insumo.stock_minimo})")
+                # 🔥 DISPARADOR: Sincronizamos el estado de los platos que usan este insumo que acaba de bajar
+                # Usamos la fila limpia que guardamos: item.id_insumo_id
+                RepositorioInventario.sincronizar_estado_platos_por_insumo(item.id_insumo_id) 
+
+    @staticmethod
+    def sincronizar_estado_platos_por_insumo(id_insumo):
+        """
+        Revisa todos los platos que usan un insumo específico empleando el ORM.
+        - Si algún insumo no alcanza, pasa el plato a 'agotado'.
+        - Si todos los insumos vuelven a estar bien, pasa el plato a 'activo'.
+        """
+        from django.db.models import F
+        from ..modelos.inventario_modelo import Receta, Producto, EstadoProducto
+        
+        # 1. Buscamos todos los IDs de los platos que utilicen este ingrediente en su receta
+        platos_asociados = Receta.objects.filter(id_insumo_id=id_insumo).values_list('id_plato_id', flat=True).distinct()
+        
+        for id_plato in platos_asociados:
+            # 2. Contamos cuántos ingredientes de ESTE plato se encuentran actualmente insuficientes
+            ingredientes_insuficientes = Receta.objects.filter(
+                id_plato_id=id_plato,
+                id_insumo__stock_actual__lt=F('cantidad')
+            ).count()
+            
+            # 3. Determinamos el string del nuevo estado
+            nuevo_estado_nombre = 'agotado' if ingredientes_insuficientes > 0 else 'activo'
+            
+            # 4. Buscamos o creamos el objeto de estado correcto para no romper las llaves foráneas
+            estado_obj, _ = EstadoProducto.objects.get_or_create(nombre_estado_producto=nuevo_estado_nombre)
+            
+            # 5. Actualizamos el registro del plato apuntando al objeto de estado correspondiente
+            Producto.objects.filter(id_producto=id_plato).update(id_estado_producto=estado_obj)
+            
+            print(f"🔄 SINCRONIZACIÓN -> Plato ID {id_plato} actualizado a estado relacional: '{nuevo_estado_nombre}'")

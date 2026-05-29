@@ -9,6 +9,7 @@ class ItemPedido:
     name: str
     price: float
     qty: int
+    notas: str = ""
 
 @dataclass
 class PedidoMesa:
