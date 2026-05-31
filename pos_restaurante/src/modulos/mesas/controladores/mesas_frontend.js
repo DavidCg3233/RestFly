@@ -509,17 +509,22 @@ window.updateQty = function(prodId, delta) {
 
 window.renderPedido = function() {
     const container = document.getElementById('contenedor-pedido-items');
-    // ... tu lógica para encontrar el pedido actual ...
     const order = pedidos.find(p => p.id === state.activeOrderId);
     
+    // Si no hay pedido o está vacío
     if (!order || order.items.length === 0) {
         container.innerHTML = `<p class="text-center text-muted text-sm mt-10">No hay productos en el pedido.</p>`;
         document.getElementById('pedido-total').innerText = '$0.00';
         return;
     }
 
+    // 1. Calcular el total exacto basado en los items actuales
+    // (Por si acaso 'order.total' no está actualizado)
+    const totalCalculado = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    order.total = totalCalculado; // Mantenemos el objeto global actualizado
+
+    // 2. Renderizar los items
     container.innerHTML = order.items.map((item, index) => {
-        // Asegurarnos de que item.notas exista, si no, lo dejamos vacío
         const notaActual = item.notas || ''; 
         
         return `
@@ -555,7 +560,11 @@ window.renderPedido = function() {
         `;
     }).join('');
 
-    // ... tu lógica para actualizar el total y los íconos ...
+    const spanTotal = document.getElementById('pedido-total');
+    if (spanTotal) {
+        spanTotal.innerText = `$${totalCalculado.toFixed(2)}`;
+    }
+
     if(typeof lucide !== 'undefined') lucide.createIcons();
 };
 
