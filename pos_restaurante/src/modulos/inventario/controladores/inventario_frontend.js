@@ -22,7 +22,11 @@
         search: "",
         filterCat: "all",
         items: [], 
-        platos: [] 
+        platos: [],
+        // 🟢 NUEVAS VARIABLES PARA LOS FILTROS DE PLATOS
+        searchPlato: "",
+        filterPlatoCat: "todas",
+        filterPlatoEstado: "todos"
     };
 
     window.recetaTemporal = window.recetaTemporal || [];
@@ -244,16 +248,74 @@
         return { label: "OK", color: "text-green-400", bg: "bg-green-500/10 border-green-500/30", barColor: "bg-green-500" };
     }
 
+    // ==========================================
+    // LÓGICA DE TARJETAS (KPIs) Y FILTROS - PLATOS
+    // ==========================================
+
+    function actualizarKPIsPlatos() {
+    // Tomamos la lista original del estado global
+    const platos = window.estadoInv.platos || [];
+    
+    // Contamos los platos basándonos en su estado
+    // Si no tiene estado definido, asumimos 'activo' por defecto
+    const activos = platos.filter(p => (p.estado || 'activo').toLowerCase() === 'activo').length;
+    const agotados = platos.filter(p => (p.estado || '').toLowerCase() === 'agotado').length;
+    const inactivos = platos.filter(p => (p.estado || '').toLowerCase() === 'inactivo').length;
+
+    // Capturamos los elementos del HTML
+    const elActivos = document.getElementById("kpi-activos");
+    const elAgotados = document.getElementById("kpi-agotados");
+    const elInactivos = document.getElementById("kpi-inactivos");
+
+    // Inyectamos los valores de forma segura y podemos añadir una pequeña animación si queremos
+    if (elActivos) elActivos.textContent = activos;
+    if (elAgotados) elAgotados.textContent = agotados;
+    if (elInactivos) elInactivos.textContent = inactivos;
+    }
+
+    window.filtrarPlatos = function() {
+    // Leemos los inputs del HTML (los IDs coinciden con el nuevo diseño)
+    const searchInput = document.getElementById("buscar-plato");
+    const catSelect = document.getElementById("filtro-categoria-plato");
+    const estSelect = document.getElementById("filtro-estado-plato");
+
+    // Actualizamos el estado global con los valores actuales
+    if (searchInput) window.estadoInv.searchPlato = searchInput.value.toLowerCase().trim();
+    if (catSelect) window.estadoInv.filterPlatoCat = catSelect.value;
+    if (estSelect) window.estadoInv.filterPlatoEstado = estSelect.value.toLowerCase();
+
+    // Mandamos a repintar la tabla (renderTablaPlatos ya debería usar el estado global para filtrar)
+    renderTablaPlatos();
+    };
+
     function renderTablaPlatos() {
         const tbody = document.getElementById('platos-table-body');
         if (!tbody) return;
         
-        if (window.estadoInv.platos.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-muted italic">No hay platos registrados. Crea uno nuevo.</td></tr>`;
+        // 1. Siempre actualizamos las tarjetas arriba (mostrando el global)
+        actualizarKPIsPlatos();
+        
+        // 2. Filtramos el arreglo de platos según lo que el usuario eligió
+        const platosFiltrados = window.estadoInv.platos.filter(plato => {
+            const txt = window.estadoInv.searchPlato;
+            const cat = window.estadoInv.filterPlatoCat;
+            const est = window.estadoInv.filterPlatoEstado;
+            const estadoPlato = (plato.estado || "activo").toLowerCase();
+
+            const matchTexto = plato.nombre.toLowerCase().includes(txt);
+            const matchCat = cat === "todas" || plato.categoria === cat;
+            const matchEst = est === "todos" || estadoPlato === est;
+
+            return matchTexto && matchCat && matchEst;
+        });
+
+        if (platosFiltrados.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-muted italic">No se encontraron platos con estos filtros.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = window.estadoInv.platos.map(plato => {
+        // 3. Pintamos SOLO los platos que pasaron el filtro
+        tbody.innerHTML = platosFiltrados.map(plato => {
             const recetaArreglo = Array.isArray(plato.receta) ? plato.receta : [];
             const resumenReceta = recetaArreglo.map(ing => ing.nombre).join(', ');
             const recetaTexto = resumenReceta.length > 35 ? resumenReceta.substring(0, 35) + '...' : resumenReceta;
@@ -293,6 +355,7 @@
                 </tr>
             `;
         }).join('');
+        
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
@@ -505,7 +568,6 @@
             `<option value="${i.id}" data-unidad="${i.unit}" data-nombre="${i.name}">${i.name} (${i.unit})</option>`
         ).join('');
         
-        // 🟢 NUEVO: Nos aseguramos de forzar el mapeo de opciones correctas
         renderOpcionesSelect(); 
 
         document.getElementById("plato-modal-title").textContent = "Nuevo Plato";
@@ -513,7 +575,11 @@
         document.getElementById("plato-form-id").value = "";
         document.getElementById("plato-form-name").value = "";
         document.getElementById("plato-form-price").value = "";
-        document.getElementById("plato-form-category").value = "Comida"; // 🟢 NUEVO: Default 'Comida'
+        document.getElementById("plato-form-category").value = "Comida";
+        
+        // 🔥 NUEVO: Forzamos el estado activo para los platos nuevos
+        const selectEstado = document.getElementById("plato-form-estado");
+        if(selectEstado) selectEstado.value = "activo";
         
         window.recetaTemporal = [];
 
@@ -526,23 +592,37 @@
         const modal = document.getElementById("plato-modal");
         const content = document.getElementById("plato-modal-content");
         if (!modal || !content) return;
-
+    
         const selectInsumos = document.getElementById("plato-form-insumo");
         selectInsumos.innerHTML = window.estadoInv.items.map(i => 
             `<option value="${i.id}" data-unidad="${i.unit}" data-nombre="${i.name}">${i.name} (${i.unit})</option>`
         ).join('');
         
         renderOpcionesSelect();
-
+    
         document.getElementById("plato-modal-title").textContent = "Editar Plato";
         document.getElementById("plato-btn-save").textContent = "Guardar cambios";
-        document.getElementById("plato-form-id").value = plato.id;
-        document.getElementById("plato-form-name").value = plato.nombre;
-        document.getElementById("plato-form-price").value = plato.precio;
-        document.getElementById("plato-form-category").value = plato.categoria;
         
-        window.recetaTemporal = JSON.parse(JSON.stringify(plato.receta));
-
+        document.getElementById("plato-form-id").value = plato.id || plato.id_producto || "";
+        document.getElementById("plato-form-name").value = plato.nombre || plato.nombre_producto || "";
+        document.getElementById("plato-form-price").value = plato.precio || "";
+        document.getElementById("plato-form-category").value = plato.categoria || plato.id_categoria || "Comida";
+        
+        // 🛡️ TRADUCTOR INTELIGENTE DE ESTADOS
+        const selectEstado = document.getElementById("plato-form-estado");
+        if (selectEstado) {
+            let estadoActual = plato.estado || plato.id_estado_producto || "activo";
+            
+            // Si el backend nos da el ID numérico de la base de datos, lo convertimos a texto para el HTML
+            if (estadoActual === 1 || estadoActual === "1") estadoActual = "activo";
+            if (estadoActual === 2 || estadoActual === "2") estadoActual = "inactivo";
+            if (estadoActual === 3 || estadoActual === "3") estadoActual = "agotado";
+            
+            selectEstado.value = String(estadoActual).toLowerCase();
+        }
+        
+        window.recetaTemporal = JSON.parse(JSON.stringify(plato.receta || plato.ingredientes || []));
+    
         renderRecetaTemporal();
         modal.classList.remove("hidden");
         setTimeout(() => content.classList.replace("scale-95", "scale-100"), 10);
@@ -595,20 +675,40 @@
         const nombre = document.getElementById("plato-form-name").value.trim();
         const precio = parseFloat(document.getElementById("plato-form-price").value) || 0;
         const categoria = document.getElementById("plato-form-category").value.trim();
-
+        
+        // 🌟 Capturamos el texto ('activo', 'inactivo', 'agotado')
+        const estadoSelect = document.getElementById("plato-form-estado");
+        const estadoElegido = estadoSelect ? estadoSelect.value : 'activo'; 
+    
+        // 🛑 NUEVO: Validación de Nombre Duplicado
+        // Buscamos si ya existe un plato con ese nombre en tu estado global, 
+        // ignorando mayúsculas/minúsculas y asegurándonos de que no sea el mismo plato que estamos editando.
+        const platosExistentes = window.estadoInv.platos || [];
+        const nombreDuplicado = platosExistentes.some(plato => 
+            plato.nombre.toLowerCase() === nombre.toLowerCase() && 
+            String(plato.id) !== String(id)
+        );
+    
+        if (nombreDuplicado) {
+            alert(`⚠️ El plato "${nombre}" ya está registrado. Por favor, elige un nombre diferente para evitar errores en las recetas y comandas.`);
+            return; // Detiene la ejecución
+        }
+    
+        // Validación normal de campos vacíos
         if (!nombre || precio <= 0 || window.recetaTemporal.length === 0) {
             alert("El plato debe tener nombre, precio válido y al menos un ingrediente en su receta.");
             return;
         }
-
+    
         const payload = {
             id: id || null, 
-            nombre: nombre,
-            precio: precio,
-            categoria: categoria,
+            nombre: nombre,       
+            precio: precio,       
+            categoria: categoria, 
+            estado: estadoElegido, // 🌟 Enviamos el string que el .lower() de Django espera
             receta: [...window.recetaTemporal]
         };
-
+    
         guardarPlatoBackend(payload);
     };
 

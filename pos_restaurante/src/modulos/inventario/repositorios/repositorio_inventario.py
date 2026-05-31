@@ -44,7 +44,9 @@ class RepositorioInventario:
     @staticmethod
     @transaction.atomic
     def crear_plato_con_receta(datos_plato, ingredientes_data):
-        estado, _ = EstadoProducto.objects.get_or_create(nombre_estado_producto='activo')
+        # 🔥 Leemos el estado del frontend; si no viene, usamos 'activo'
+        nombre_estado = datos_plato.get('estado', 'activo').lower()
+        estado, _ = EstadoProducto.objects.get_or_create(nombre_estado_producto=nombre_estado)
         categoria, _ = CategoriaProducto.objects.get_or_create(nombre_categoria=datos_plato['categoria'])
 
         # 1. Creamos el Plato
@@ -73,8 +75,15 @@ class RepositorioInventario:
             )
         
         Receta.objects.bulk_create(recetas)
+
+        # 🛡️ REGLA 2: EL AUDITOR IMPLACABLE
+        # Solo audita si se crea como 'activo'. Si entra como inactivo o agotado, se respeta.
+        if nombre_estado == 'activo':
+            for ing in ingredientes_data:
+                RepositorioInventario.sincronizar_estado_platos_por_insumo(ing['idInsumo'])
+
         return plato
-    
+
     @staticmethod
     @transaction.atomic
     def actualizar_plato_con_receta(id_plato, datos_plato, ingredientes_data):
@@ -85,12 +94,13 @@ class RepositorioInventario:
 
         categoria, _ = CategoriaProducto.objects.get_or_create(nombre_categoria=datos_plato['categoria'])
         
-        # 🟢 INYECCIÓN SEGURA: Si el frontend manda un estado (o si cambió por el borrado lógico), lo actualizamos
+        # 🟢 INYECCIÓN SEGURA DEL ESTADO
+        # Rescatamos el estado que manda el usuario o mantenemos el que ya tenía.
+        estado_elegido = datos_plato.get('estado', plato.id_estado_producto.nombre_estado_producto).lower()
         if 'estado' in datos_plato:
-            estado_obj, _ = EstadoProducto.objects.get_or_create(nombre_estado_producto=datos_plato['estado'].lower())
+            estado_obj, _ = EstadoProducto.objects.get_or_create(nombre_estado_producto=estado_elegido)
             plato.id_estado_producto = estado_obj
 
-        # 🔒 TU LÓGICA ORIGINAL SIGUE EXACTAMENTE IGUAL DESDE AQUÍ:
         plato.nombre_producto = datos_plato['nombre']
         plato.precio = datos_plato['precio']
         plato.id_categoria = categoria
@@ -117,7 +127,60 @@ class RepositorioInventario:
             )
         
         Receta.objects.bulk_create(recetas)
+
+        # 🛡️ REGLA 2: EL AUDITOR IMPLACABLE (Corregido)
+        # Solo mandamos a auditar si el usuario pide explícitamente que sea 'activo'.
+        # Si lo puso en 'agotado' porque se dañó la máquina, el sistema respeta.
+        if estado_elegido == 'activo':
+            for ing in ingredientes_data:
+                RepositorioInventario.sincronizar_estado_platos_por_insumo(ing['idInsumo'])
+
         return plato
+
+    @staticmethod
+    def sincronizar_estado_platos_por_insumo(id_insumo):
+        """
+        Revisa todos los platos que usan un insumo específico empleando el ORM.
+        - 🛡️ Respeta los platos 'inactivos'.
+        - 🛡️ Respeta los platos 'agotados' manualmente, aunque haya stock.
+        - Si algún insumo no alcanza, pasa el plato a 'agotado'.
+        - Si todos los insumos vuelven a estar bien (y no estaba agotado manual), pasa a 'activo'.
+        """
+        from django.db.models import F
+        from ..modelos.inventario_modelo import Receta, Producto, EstadoProducto
+        
+        platos_asociados = Receta.objects.filter(id_insumo_id=id_insumo).values_list('id_plato_id', flat=True).distinct()
+        
+        for id_plato in platos_asociados:
+            plato_actual = Producto.objects.get(id_producto=id_plato)
+            estado_actual_nombre = plato_actual.id_estado_producto.nombre_estado_producto
+            
+            # 🛡️ REGLA 1: EL INACTIVO ES SAGRADO
+            if estado_actual_nombre == 'inactivo':
+                continue
+                
+            ingredientes_insuficientes = Receta.objects.filter(
+                id_plato_id=id_plato,
+                id_insumo__stock_actual__lt=F('cantidad')
+            ).count()
+            
+            # 🛡️ REGLA 3: EL AGOTADO MANUAL DEBE RESPETARSE
+            # Si estaba en 'agotado' pero SÍ tenemos stock de todo, significa que un humano 
+            # lo bloqueó a propósito (ej. daño de freidora). NO debemos forzarlo a activo.
+            if estado_actual_nombre == 'agotado' and ingredientes_insuficientes == 0:
+                print(f"⚠️ Sincronización omitida: Plato ID {id_plato} tiene stock, pero fue agotado manualmente.")
+                continue 
+
+            nuevo_estado_nombre = 'agotado' if ingredientes_insuficientes > 0 else 'activo'
+            
+            # Si el estado calculado es igual al que ya tiene, ni siquiera tocamos la BD
+            if nuevo_estado_nombre == estado_actual_nombre:
+                continue
+                
+            estado_obj, _ = EstadoProducto.objects.get_or_create(nombre_estado_producto=nuevo_estado_nombre)
+            Producto.objects.filter(id_producto=id_plato).update(id_estado_producto=estado_obj)
+            
+            print(f"🔄 SINCRONIZACIÓN -> Plato ID {id_plato} actualizado a estado: '{nuevo_estado_nombre}'")
     
     @staticmethod
     def eliminar_plato(id_plato):
@@ -237,34 +300,3 @@ class RepositorioInventario:
                 # 🔥 DISPARADOR: Sincronizamos el estado de los platos que usan este insumo que acaba de bajar
                 # Usamos la fila limpia que guardamos: item.id_insumo_id
                 RepositorioInventario.sincronizar_estado_platos_por_insumo(item.id_insumo_id) 
-
-    @staticmethod
-    def sincronizar_estado_platos_por_insumo(id_insumo):
-        """
-        Revisa todos los platos que usan un insumo específico empleando el ORM.
-        - Si algún insumo no alcanza, pasa el plato a 'agotado'.
-        - Si todos los insumos vuelven a estar bien, pasa el plato a 'activo'.
-        """
-        from django.db.models import F
-        from ..modelos.inventario_modelo import Receta, Producto, EstadoProducto
-        
-        # 1. Buscamos todos los IDs de los platos que utilicen este ingrediente en su receta
-        platos_asociados = Receta.objects.filter(id_insumo_id=id_insumo).values_list('id_plato_id', flat=True).distinct()
-        
-        for id_plato in platos_asociados:
-            # 2. Contamos cuántos ingredientes de ESTE plato se encuentran actualmente insuficientes
-            ingredientes_insuficientes = Receta.objects.filter(
-                id_plato_id=id_plato,
-                id_insumo__stock_actual__lt=F('cantidad')
-            ).count()
-            
-            # 3. Determinamos el string del nuevo estado
-            nuevo_estado_nombre = 'agotado' if ingredientes_insuficientes > 0 else 'activo'
-            
-            # 4. Buscamos o creamos el objeto de estado correcto para no romper las llaves foráneas
-            estado_obj, _ = EstadoProducto.objects.get_or_create(nombre_estado_producto=nuevo_estado_nombre)
-            
-            # 5. Actualizamos el registro del plato apuntando al objeto de estado correspondiente
-            Producto.objects.filter(id_producto=id_plato).update(id_estado_producto=estado_obj)
-            
-            print(f"🔄 SINCRONIZACIÓN -> Plato ID {id_plato} actualizado a estado relacional: '{nuevo_estado_nombre}'")

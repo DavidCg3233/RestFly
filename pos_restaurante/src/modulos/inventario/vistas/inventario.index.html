@@ -54,10 +54,91 @@
     <div id="vista-platos" class="hidden flex-col gap-6 animate-in fade-in duration-300">
         
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <p class="text-muted text-sm font-medium">Gestiona los platillos que vendes al cliente y sus recetas.</p>
+            <p></p>
             <button onclick="abrirModalPlato()" class="flex items-center justify-center gap-2 px-4 py-2 bg-foreground text-background hover:bg-foreground/90 rounded-lg text-sm font-medium transition-colors">
                 <i data-lucide="utensils" class="w-4 h-4"></i> Crear Plato
             </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    
+            <div class="bg-card p-4 rounded-xl border border-border flex flex-col gap-2 shadow-sm transition-all hover:border-green-500/30">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-medium text-muted">Platos Activos</h3>
+                    <div class="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <p class="text-2xl font-black text-foreground" id="kpi-activos">0</p>
+                    <span class="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded-md">En venta</span>
+                </div>
+            </div>
+        
+            <div class="bg-card p-4 rounded-xl border border-border flex flex-col gap-2 shadow-sm transition-all hover:border-red-500/30">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-medium text-muted">Platos Agotados</h3>
+                    <div class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <p class="text-2xl font-black text-foreground" id="kpi-agotados">0</p>
+                    <span class="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-1 rounded-md">Sin stock</span>
+                </div>
+            </div>
+        
+            <div class="bg-card p-4 rounded-xl border border-border flex flex-col gap-2 shadow-sm transition-all hover:border-slate-500/30">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-medium text-muted">Platos Inactivos</h3>
+                    <div class="w-8 h-8 rounded-full bg-slate-500/10 flex items-center justify-center text-slate-500">
+                        <i data-lucide="archive" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <p class="text-2xl font-black text-foreground" id="kpi-inactivos">0</p>
+                    <span class="text-xs font-bold text-slate-500 bg-slate-500/10 px-2 py-1 rounded-md">Ocultos</span>
+                </div>
+            </div>
+        
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-3">
+            <div class="flex-1">
+                <input 
+                    type="text" 
+                    id="buscar-plato" 
+                    placeholder="🔍 Buscar plato o bebida..." 
+                    class="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    oninput="window.filtrarPlatos()"
+                >
+            </div>
+            
+            <div class="w-full md:w-48">
+                <select 
+                    id="filtro-categoria-plato" 
+                    class="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    onchange="window.filtrarPlatos()"
+                >
+                    <option value="todas">🍽️ Todas las categorías</option>
+                    <option value="Comida">Comida</option>
+                    <option value="Bebida">Bebida</option>
+                    <option value="Postre">Postre</option>
+                </select>
+            </div>
+
+            <div class="w-full md:w-48">
+                <select 
+                    id="filtro-estado-plato" 
+                    class="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    onchange="window.filtrarPlatos()"
+                >
+                    <option value="todos">📊 Todos los estados</option>
+                    <option value="activo">Activos</option>
+                    <option value="agotado">Agotados</option>
+                    <option value="inactivo">Inactivos</option>
+                </select>
+            </div>
         </div>
 
         <div class="bg-card border border-border rounded-xl overflow-x-auto shadow-sm">
@@ -162,6 +243,15 @@
                     <option value="Comida">Comida</option>
                     <option value="Bebida">Bebida</option>
                     <option value="Postre">Postre</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-muted mb-1">Estado del Plato</label>
+                <select id="plato-form-estado" class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary/50">
+                    <option value="activo">Activo (Visible en el menú)</option>
+                    <option value="inactivo">Inactivo (Ocultar del menú)</option>
+                    <option value="agotado">Agotado (Sin stock)</option>
                 </select>
             </div>
         </div>
