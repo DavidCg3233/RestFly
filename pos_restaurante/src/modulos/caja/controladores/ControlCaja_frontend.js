@@ -85,16 +85,15 @@
         });
         document.getElementById("caja-info-apertura").textContent = `Sesión iniciada: ${fechaFormat}`;
 
-        // 1. Total de ventas general (para mostrar en la tarjeta de estadísticas)
-        const totalVentas = window.estadoCaja.ventas.reduce((acc, v) => acc + v.total, 0);
+        // 1. Total de ventas general (Desglosamos el IVA para mostrar el neto vendido)
+        const totalVentas = window.estadoCaja.ventas.reduce((acc, v) => acc + (v.total / 1.16), 0);
         
-        // 2. Ventas SOLO en efectivo (para que cuadre la plata física)
+        // 💥 CORRECCIÓN 1: Ventas en efectivo descontando el IVA para el cálculo del esperado
         const ventasEnEfectivo = window.estadoCaja.ventas
             .filter(v => v.metodo.toLowerCase() === 'efectivo')
-            .reduce((acc, v) => acc + v.total, 0);
+            .reduce((acc, v) => acc + (v.total / 1.16), 0);
 
-        // 🔥 3. EL PARCHE: Filtramos para calcular solo los movimientos manuales
-        // Excluimos cualquier movimiento que tenga la palabra "venta" en su descripción
+        // 3. Filtramos para calcular solo los movimientos manuales
         const movimientosManuales = window.estadoCaja.movimientos.filter(
             m => !m.desc.toLowerCase().includes('venta')
         );
@@ -103,7 +102,7 @@
             return m.tipo === "entrada" ? acc + m.monto : acc - m.monto;
         }, 0);
 
-        // 4. Matemática final limpia (Inicial + Ventas Físicas + Movimientos Manuales)
+        // 4. Matemática final limpia (Inicial + Ventas Físicas Neto + Movimientos Manuales)
         const esperado = window.estadoCaja.sesion.montoInicial + ventasEnEfectivo + totalMovsManuales;
         window.estadoCaja.efectivoEsperadoCache = esperado;
 
@@ -112,14 +111,12 @@
         document.getElementById("stat-ventas").textContent = `$${totalVentas.toFixed(2)}`;
         
         const movEl = document.getElementById("stat-movimientos");
-        // Mostramos solo el total de movimientos manuales para no confundir al usuario
         movEl.textContent = `$${totalMovsManuales.toFixed(2)}`;
         movEl.className = `text-2xl font-black ${totalMovsManuales >= 0 ? 'text-[var(--tarjeta-texto)]' : 'text-[var(--peligro)]'}`;
         
         document.getElementById("stat-esperado").textContent = `$${esperado.toFixed(2)}`;
         document.getElementById("resumen-total-ventas").textContent = `$${totalVentas.toFixed(2)}`;
 
-        // Renderizamos las listas (Aquí seguirán apareciendo las ventas en el historial visual)
         window.renderListaMovimientos();
         window.renderResumenMetodos();
     };
@@ -223,6 +220,11 @@
             const sign = isEntrada ? '+' : '-';
             const time = mov.fecha.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
+            // 💥 CORRECCIÓN AQUÍ: Verificamos si es una venta para quitarle el IVA. 
+            // Si es un movimiento manual de caja, mantenemos el monto exacto.
+            const esVenta = mov.desc.toLowerCase().includes('venta');
+            const montoNeto = esVenta ? (mov.monto / 1.16) : mov.monto;
+
             return `
                 <div class="flex items-center justify-between p-3 rounded-lg bg-[var(--secundario)] border border-[var(--borde)]">
                     <div class="flex items-center gap-3 flex-1">
@@ -232,7 +234,7 @@
                             <p class="text-xs text-[var(--texto-apagado)] font-medium">${time}</p>
                         </div>
                     </div>
-                    <p class="font-black text-right ${colorClass}">${sign}$${mov.monto.toFixed(2)}</p>
+                    <p class="font-black text-right ${colorClass}">${sign}$${montoNeto.toFixed(2)}</p>
                 </div>
             `;
         }).join('');
@@ -246,7 +248,9 @@
 
         listContainer.innerHTML = methods.map(method => {
             const sales = window.estadoCaja.ventas.filter(v => v.metodo.toLowerCase() === method);
-            const total = sales.reduce((acc, v) => acc + v.total, 0);
+            
+            // Aquí faltaba dividir entre 1.16
+            const total = sales.reduce((acc, v) => acc + (v.total / 1.16), 0);
             const count = sales.length;
 
             return `

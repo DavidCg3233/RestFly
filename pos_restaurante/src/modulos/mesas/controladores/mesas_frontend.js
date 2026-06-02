@@ -137,7 +137,7 @@ window.eliminarMesa = function(idMesa, event) {
                         html: `
                             <div class="flex flex-col items-center text-center">
                                 <div class="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                 </div>
                                 <h2 class="text-2xl font-bold mb-2">¡Eliminada!</h2>
                                 <p class="text-sm mb-6 opacity-70">La mesa ha sido borrada del mapa correctamente.</p>
@@ -681,9 +681,39 @@ window.guardarNota = function(prodId, textoNota) {
 
 window.abrirModalNuevaMesa = function() {
     document.getElementById('modal-crear-mesa').classList.remove('hidden');
-    document.getElementById('nueva-mesa-numero').value = '';
-    document.getElementById('nueva-mesa-capacidad').value = '';
+    
+    // Captura de los inputs numéricos originales
+    const inputNumero = document.getElementById('nueva-mesa-numero');
+    const inputCapacidad = document.getElementById('nueva-mesa-capacidad');
+    
+    inputNumero.value = '';
+    inputCapacidad.value = '';
     document.getElementById('nueva-mesa-zona').value = '';
+
+    // 🛡️ CAPA 1: Limitar el comportamiento del spinner nativo del HTML
+    inputNumero.setAttribute('min', '1');
+    inputCapacidad.setAttribute('min', '1');
+
+    // 🛡️ CAPA 2: Bloquear los caracteres "-", "+", "e" y "E" directamente desde el teclado
+    const interceptarTeclasInvalidas = function(e) {
+        if (['-', '+', 'e', 'E'].includes(e.key)) {
+            e.preventDefault();
+        }
+    };
+    inputNumero.onkeydown = interceptarTeclasInvalidas;
+    inputCapacidad.onkeydown = interceptarTeclasInvalidas;
+
+    // 🛡️ CAPA 3: Control preventivo por si intentan arrastrar o pegar texto negativo
+    inputNumero.oninput = function() {
+        if (this.value !== '' && parseInt(this.value, 10) < 1) {
+            this.value = '';
+        }
+    };
+    inputCapacidad.oninput = function() {
+        if (this.value !== '' && parseInt(this.value, 10) < 1) {
+            this.value = '';
+        }
+    };
 };
 
 window.cerrarModalNuevaMesa = function() {
@@ -696,6 +726,11 @@ window.guardarNuevaMesa = async function() {
     const zona = document.getElementById('nueva-mesa-zona').value;
 
     if (!numero || !capacidad || !zona) return alert("Completa todos los campos");
+
+    // 🛡️ CAPA 4: Validación final estricta en JS antes de enviar el Fetch
+    if (parseInt(numero, 10) < 1 || parseInt(capacidad, 10) < 1) {
+        return alert("❌ El número de mesa y la capacidad deben ser superiores a cero.");
+    }
 
     try {
         const response = await fetch(`${window.API_BASE_URL_MESAS}/crear/`, {

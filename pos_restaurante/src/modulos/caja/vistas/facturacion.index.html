@@ -301,7 +301,9 @@
     }
 
     function renderEstadisticas() {
-        const totalSales = estado.historialVentas.reduce((acc, sale) => acc + sale.total, 0);
+        // 1. Total general de ventas arriba (Neto sin IVA)
+        const totalSales = estado.historialVentas.reduce((acc, sale) => acc + (sale.total / (1 + estado.taxRate)), 0);
+        
         const totalSalesEl = document.getElementById("fac-stats-total");
         const statsCountEl = document.getElementById("fac-stats-count");
         const container = document.getElementById("fac-stats-methods");
@@ -315,7 +317,10 @@
         container.innerHTML = methods.map(method => {
             const salesOfMethod = estado.historialVentas.filter(s => s.paymentMethod === method);
             const count = salesOfMethod.length;
-            const total = salesOfMethod.reduce((acc, s) => acc + s.total, 0);
+            
+            // 💥 AQUÍ ESTÁ EL TRUCO PARA EL HTML QUE ME MANDASTE: 
+            // Quitamos el IVA a cada método de pago individual
+            const total = salesOfMethod.reduce((acc, s) => acc + (s.total / (1 + estado.taxRate)), 0);
             
             return `
                 <div class="flex justify-between items-center text-sm p-3 rounded-lg bg-[var(--secundario)]/30 border border-[var(--borde)]">
@@ -333,7 +338,7 @@
             `;
         }).join('');
     }
-
+    
     function renderHistorialVentas() {
         const tbody = document.getElementById("fac-history-table");
         const historyCountEl = document.getElementById("fac-history-count");
@@ -355,6 +360,11 @@
 
         tbody.innerHTML = filtradas.map(sale => {
             const time = sale.completedAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            // 💥 CORRECCIÓN AQUÍ: Le quitamos el IVA al total de cada fila en el historial
+            // para que pase de 5800 a 5000
+            const totalNeto = sale.total / (1 + estado.taxRate);
+
             return `
                 <tr class="border-b border-[var(--borde)] hover:bg-[var(--secundario)]/40 transition-colors">
                     <td class="py-3 px-6 font-mono font-medium text-[var(--tarjeta-texto)]">${sale.id}</td>
@@ -365,7 +375,7 @@
                             ${sale.paymentMethod}
                         </span>
                     </td>
-                    <td class="py-3 px-6 text-right font-black text-[var(--primario)]">$${sale.total.toFixed(2)}</td>
+                    <td class="py-3 px-6 text-right font-black text-[var(--primario)]">$${totalNeto.toFixed(2)}</td>
                     <td class="py-3 px-6 text-[var(--texto-apagado)] text-xs font-medium">${time}</td>
                 </tr>
             `;
@@ -375,7 +385,7 @@
     // ==========================================
     // 4. FUNCIONES GLOBALES PARA HTML
     // ==========================================
-    window.abrirModalPago = function(orderId) {
+window.abrirModalPago = function(orderId) {
         const order = estado.pedidosActivos.find(o => o.id === orderId);
         if (!order) return;
         
@@ -384,9 +394,11 @@
 
         document.getElementById("fac-modal-mesa").textContent = `Mesa ${order.tableNumber}`;
         
-        const subtotal = order.total;
-        const iva = subtotal * estado.taxRate;
-        const totalNeto = subtotal + iva;
+        // --- 💥 CORRECCIÓN MATEMÁTICA AQUÍ ---
+        const totalNeto = order.total; // El total que viene de la BD ya trae el IVA
+        const subtotal = totalNeto / (1 + estado.taxRate); // Echamos para atrás para sacar la base
+        const iva = totalNeto - subtotal; // La diferencia es el impuesto real
+        // -------------------------------------
 
         document.getElementById("fac-modal-subtotal").textContent = `$${subtotal.toFixed(2)}`;
         document.getElementById("fac-modal-iva").textContent = `$${iva.toFixed(2)}`;
