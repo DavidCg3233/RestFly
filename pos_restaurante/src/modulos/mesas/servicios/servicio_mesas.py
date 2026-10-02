@@ -127,6 +127,10 @@ class ServicioMesas:
         except ValueError:
             raise ValueError("El número de mesa y la capacidad deben ser valores numéricos válidos.")
 
+        # 🛑 CONDICIONAL: Validar que ambos estén entre 1 y 99
+        if not (1 <= numero_int <= 99) or not (1 <= capacidad_int <= 99):
+            raise ValueError("El número de mesa y la capacidad deben estar entre 1 y 99.")
+
         # 👉 AQUÍ CONECTAMOS CON LA BASE DE DATOS REAL
         RepositorioMesas.crear_mesa(numero_int, capacidad_int)
 

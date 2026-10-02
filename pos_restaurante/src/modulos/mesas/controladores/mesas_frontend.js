@@ -193,6 +193,12 @@ window.setFilter = function(key) {
     renderMesas();
 };
 
+// ==========================================
+// 3. RENDERIZADO Y LÓGICA DE INTERFAZ
+// ==========================================
+
+// ... (tus otras funciones de renderFiltros y setFilter quedan igual) ...
+
 window.renderMesas = function() {
     const container = document.getElementById('contenedor-zonas');
     if (!container) return;
@@ -206,7 +212,11 @@ window.renderMesas = function() {
     const zones = [...new Set(mesas.map(m => m.zone))];
 
     zones.forEach(zone => {
-        const zoneMesas = filtered.filter(m => m.zone === zone);
+        // 👉 EL CAMBIO ESTÁ AQUÍ: Añadimos .sort(...) al final para ordenar por número de mesa
+        const zoneMesas = filtered
+            .filter(m => m.zone === zone)
+            .sort((a, b) => parseInt(a.number) - parseInt(b.number));
+
         if (zoneMesas.length === 0) return;
 
         const zoneHtml = zoneMesas.map(mesa => {
